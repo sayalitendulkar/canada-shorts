@@ -1,0 +1,72 @@
+# Runs the news program every 30 minutes and publishes the result as a free
+# website on GitHub Pages:  https://<your-username>.github.io/<repo-name>/
+name: Update news
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # every 30 minutes (GitHub may start a few minutes late)
+  workflow_dispatch: {}       # lets you press "Run workflow" by hand
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: news
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      CS_DB_PATH: ${{ github.workspace }}/backend/data/canada_shorts.db
+      CS_EDITOR_REVIEW: "0"
+      CS_AI_DAILY_LIMIT: "30"
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install
+        run: pip install -r backend/requirements.txt
+
+      - name: Bring back the news database from the last run
+        uses: actions/cache/restore@v4
+        with:
+          path: backend/data
+          key: newsdb-${{ github.run_id }}
+          restore-keys: newsdb-
+
+      - name: Collect news and write summaries
+        working-directory: backend
+        run: |
+          mkdir -p data
+          python -m app.pipeline
+
+      - name: Save the news database for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: backend/data
+          key: newsdb-${{ github.run_id }}
+
+      - name: Make the website files
+        working-directory: backend
+        run: python -m app.export ../site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
