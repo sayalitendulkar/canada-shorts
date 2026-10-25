@@ -1,0 +1,65 @@
+# Builds the Android app for free on GitHub and publishes the install file (APK)
+# on the project's "Releases" page. Runs when you press "Run workflow", or when
+# files in the app/ folder change.
+name: Build Android app
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "app/**"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create the Android project files
+        run: |
+          flutter create . --platforms=android --org ca.canadashorts --project-name canada_shorts
+          rm -f test/widget_test.dart
+          python3 tool/patch_android.py
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build the app (APK)
+        run: flutter build apk --release --build-name "0.1.${{ github.run_number }}" --build-number "${{ github.run_number }}"
+
+      - name: Rename
+        run: cp build/app/outputs/flutter-apk/app-release.apk "canada-shorts-0.1.${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: canada-shorts-apk
+          path: app/canada-shorts-*.apk
+
+      - name: Publish on the Releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "app-0.1.${{ github.run_number }}"
+          name: "Test app 0.1.${{ github.run_number }}"
+          prerelease: true
+          body: "Test version for your Android phone. Download the .apk file below and open it on your phone."
+          files: app/canada-shorts-*.apk
