@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canada Shorts — Preview</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --red: #E8412C; --ink: #1c1c1e; --text: #44474d; --muted: #8a8f98; --line: #ececec;
+    --card: #ffffff; --page: #2b2b2b; --soft: #f4f4f5;
+    --left: #2B6CB0; --centre: #8A8F98; --right: #C53030;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 16px/1.5 Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+         display: flex; justify-content: center; align-items: center; gap: 40px; min-height: 100vh; padding: 20px 16px; }
+  button { font: inherit; color: inherit; }
+
+  /* phone frame: real phone screen sizes, scaled down to fit your laptop screen */
+  .stage { flex: none; position: relative; }
+  .phone { position: absolute; top: 0; left: 0; width: calc(var(--w) * 1px + 24px); height: calc(var(--h) * 1px + 24px);
+           background: #0b0b0b; border-radius: calc(var(--r) * 1px); padding: 12px; transform-origin: top left;
+           box-shadow: 0 0 0 2px #48484a, 0 0 0 5px #1c1c1e, 0 24px 70px rgba(0,0,0,.6); }
+  .screen { position: relative; width: calc(var(--w) * 1px); height: calc(var(--h) * 1px); background: var(--card);
+            border-radius: calc(var(--r) * 1px - 12px); overflow: hidden; display: flex; flex-direction: column; }
+  .status { flex: none; height: calc(var(--sb) * 1px); background: #111; color: #fff; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 28px; font-size: 14px; font-weight: 600; position: relative; }
+  .status .cam { position: absolute; left: 50%; transform: translateX(-50%); background: #000; }
+  .island .status .cam { top: 11px; width: 118px; height: 34px; border-radius: 20px; }
+  .punch .status .cam { top: 9px; width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 0 0 2px #222; }
+  .punch .status { font-size: 12.5px; padding: 0 18px; }
+  .status .icons { display: flex; gap: 6px; align-items: center; }
+  .status svg { width: 17px; height: 12px; }
+  .homebar { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: 128px; height: 5px;
+             border-radius: 3px; background: rgba(0,0,0,.55); z-index: 30; pointer-events: none; }
+  .real .phone { position: static; transform: none !important; padding: 0; border-radius: 0; box-shadow: none; width: 100vw; height: 100vh; height: 100dvh; }
+  .real .screen { border-radius: 0; width: 100%; height: 100%; }
+  .real .stage { width: 100vw !important; height: 100vh !important; height: 100dvh !important; }
+  body.real { display: block; min-height: 0; }
+  .real .status, .real .homebar, .real .help { display: none; }
+  body.real { padding: 0; }
+  .devices { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 14px; }
+  .devices button.on { background: var(--red); border-color: var(--red); }
+
+  /* top bar */
+  .bar { display: flex; align-items: center; height: 54px; padding: 0 8px 0 18px; background: #111; color: #fff; flex: none; }
+  .bar h1 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar h1 small { color: var(--red); font-weight: 800; margin-right: 8px; letter-spacing: .02em; }
+  .iconbtn { width: 44px; height: 44px; border: 0; background: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+  .iconbtn svg { width: 24px; height: 24px; }
+  .iconbtn:hover { background: rgba(255,255,255,.08); }
+
+  /* feed of cards */
+  .feed { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; background: var(--card); }
+  .feed::-webkit-scrollbar { display: none; }
+  .card { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; background: var(--card); }
+  .pic { position: relative; height: 33%; flex: none; background: #333 center/cover no-repeat; }
+  .pic.empty { background: linear-gradient(135deg, #3a3a3c, #1c1c1e); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 22px; }
+  .tab { position: absolute; bottom: -1px; height: 34px; background: var(--card); display: flex; align-items: center;
+         gap: 8px; padding: 0 14px; border-radius: 14px 14px 0 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+  .tab.src { left: 16px; max-width: 62%; }
+  .tab.src span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tab.src i { flex: none; width: 18px; height: 18px; border-radius: 4px; background: var(--red); color: #fff; font-style: normal;
+               font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+  .tab.act { right: 16px; gap: 4px; padding: 0 8px; }
+  .tab.act button { border: 0; background: none; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; border-radius: 50%; }
+  .tab.act svg { width: 20px; height: 20px; }
+  .content { flex: 1; padding: 14px 22px 0; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; }
+  .content h2 { font-size: 20px; line-height: 1.32; font-weight: 600; margin: 0 0 10px; color: var(--ink); }
+  .content p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); font-weight: 300; }
+  .byline { margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .byline b { color: var(--ink); font-weight: 500; }
+  .cover { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .cover .mini { display: flex; width: 54px; height: 5px; border-radius: 3px; overflow: hidden; background: var(--line); flex: none; }
+  .cover .mini i { display: block; }
+  .more { flex: none; height: 68px; margin: 0; border: 0; text-align: left; padding: 0 22px; cursor: pointer; color: #fff;
+          background: #2a2a2a center/cover no-repeat; position: relative; display: flex; flex-direction: column; justify-content: center; }
+  .more::before { content: ""; position: absolute; inset: 0; background: rgba(20,20,20,.72); backdrop-filter: blur(6px); }
+  .more span { position: relative; font-size: 15px; }
+  .more small { position: relative; font-size: 12px; opacity: .75; }
+  .end { height: 100%; scroll-snap-align: start; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 30px; }
+  .msg { padding: 60px 30px; text-align: center; color: var(--muted); }
+  .banner { background: #3a3220; color: #ffe7a3; font-size: 13px; padding: 8px 12px; border-radius: 10px; margin-top: 12px; }
+  .banner a { color: inherit; font-weight: 700; }
+
+  /* right-side menu */
+  .shade { position: absolute; inset: 0; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 5; }
+  .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 82%; background: #fff; z-index: 6; transform: translateX(100%);
+            transition: transform .25s ease; display: flex; flex-direction: column; }
+  .menu-open .shade { opacity: 1; pointer-events: auto; }
+  .menu-open .drawer { transform: none; }
+  .drawer header { height: 54px; display: flex; align-items: center; padding: 0 8px 0 20px; background: #111; color: #fff; flex: none; }
+  .drawer header b { flex: 1; font-size: 17px; }
+  .drawer nav { flex: 1; overflow-y: auto; padding: 8px 0 20px; }
+  .drawer h3 { margin: 16px 20px 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .item { display: flex; align-items: center; width: 100%; border: 0; background: none; text-align: left; padding: 11px 20px;
+          font-size: 15px; cursor: pointer; gap: 10px; }
+  .item:hover { background: var(--soft); }
+  .item.on { color: var(--red); font-weight: 600; }
+  .item.on::after { content: "•"; margin-left: auto; }
+  .item em { margin-left: auto; font-style: normal; color: var(--muted); font-size: 13px; }
+
+  /* onboarding */
+  .onb { position: absolute; inset: 0; background: #fff; z-index: 10; display: flex; flex-direction: column; padding: 34px 24px 24px; }
+  .onb[hidden] { display: none; }
+  .logo { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+  .logo span { color: var(--red); }
+  .tag { color: var(--muted); margin: 2px 0 26px; font-size: 14px; }
+  .onb h2 { font-size: 20px; margin: 0 0 4px; }
+  .onb .sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .opts { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .opt { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--line); background: #fff; border-radius: 14px;
+         padding: 14px 16px; font-size: 17px; cursor: pointer; text-align: left; }
+  .opt.on { border-color: var(--red); background: #fff3f1; }
+  .opt[disabled] { opacity: .5; cursor: not-allowed; }
+  .opt em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--muted); background: var(--soft); padding: 3px 8px; border-radius: 99px; }
+  .opts.grid { flex-direction: row; flex-wrap: wrap; gap: 10px; align-content: flex-start; }
+  .chip { border: 1.5px solid var(--line); background: #fff; border-radius: 99px; padding: 9px 16px; font-size: 15px; cursor: pointer; }
+  .chip.on { border-color: var(--red); background: var(--red); color: #fff; }
+  .go { margin-top: 16px; height: 52px; border: 0; border-radius: 14px; background: var(--red); color: #fff; font-size: 17px; font-weight: 600; cursor: pointer; }
+  .go[disabled] { opacity: .4; cursor: not-allowed; }
+  .skip { border: 0; background: none; color: var(--muted); margin-top: 8px; cursor: pointer; font-size: 14px; }
+  .dots { display: flex; gap: 6px; margin-bottom: 18px; }
+  .dots i { width: 22px; height: 4px; border-radius: 2px; background: var(--line); }
+  .dots i.on { background: var(--red); }
+
+  .toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); background: #111; color: #fff; padding: 8px 16px;
+           border-radius: 99px; font-size: 14px; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  .help { width: 290px; color: #cfcfd2; font-size: 14px; }
+  .help h3 { color: #fff; font-size: 22px; margin: 0 0 4px; }
+  .help h3 span { color: var(--red); }
+  .help ul { padding-left: 18px; }
+  .help li { margin-bottom: 8px; }
+  .help a { color: #fff; }
+  .help button { margin-top: 8px; border: 1px solid #555; background: none; color: #fff; border-radius: 99px; padding: 6px 14px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+<div class="phone" id="phone">
+  <div class="screen" id="screen">
+    <div class="status"><span id="clock">9:41</span><i class="cam"></i>
+      <span class="icons">
+        <svg viewBox="0 0 17 12" fill="#fff"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+        <svg viewBox="0 0 26 12" fill="none" stroke="#fff"><rect x="0.5" y="0.5" width="22" height="11" rx="3"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="#fff" stroke="none"/><path d="M24.5 4v4" stroke-linecap="round"/></svg>
+      </span>
+    </div>
+    <div class="bar">
+      <h1 id="title"><small>CS</small><span id="titleText">My Feed</span></h1>
+      <button class="iconbtn" id="menuBtn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+    <div class="feed" id="feed" tabindex="0"></div>
+
+    <div class="shade" id="shade"></div>
+    <aside class="drawer" id="drawer" aria-label="Menu">
+      <header><b id="menuTitle">Menu</b>
+        <button class="iconbtn" id="closeBtn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <nav id="nav"></nav>
+    </aside>
+
+    <section class="onb" id="onb" hidden></section>
+    <div class="toast" id="toast"></div>
+    <div class="homebar"></div>
+  </div>
+</div>
+</div>
+
+<aside class="help">
+  <h3>Canada <span>Shorts</span></h3>
+  <p>Preview of the app on your laptop, at a real phone's screen size.</p>
+  <div class="devices" id="devices"></div>
+  <div class="banner" id="banner" hidden></div>
+  <ul>
+    <li>Scroll, or press ↑ ↓, to move one story at a time.</li>
+    <li>Tap the ☰ menu (top right) to change category, language, province or your topics.</li>
+    <li>The dark strip at the bottom of each card opens the original article. In the phone app it opens inside the app.</li>
+    <li id="adminTip">Big stories (3+ outlets) wait for an editor: <a href="/admin" target="_blank">open editor</a> (password: change-me).</li>
+  </ul>
+  <button id="resetBtn">Restart first-time setup</button>
+</aside>
+
+<script>
+/* ---------- text in each language ---------- */
+const T = {
+  en: {
+    tagline: "Canada's news in 60 words", langQ: 'Choose your language', langSub: 'You can change this later in the menu.',
+    soon: 'Coming soon', next: 'Continue', provQ: 'Where do you live?', provSub: 'We add local news from your province.',
+    skip: 'Skip', topicsQ: 'What do you like to read?', topicsSub: 'Pick at least 1. Change anytime from the menu.', start: 'Start reading',
+    myFeed: 'My Feed', allNews: 'All news', saved: 'Saved stories', feeds: 'Feeds', cats: 'Categories', settings: 'Settings',
+    language: 'Language', province: 'Province', editTopics: 'Edit my topics', none: 'Not set', menu: 'Menu',
+    shortBy: 'short by', ai: 'AI summary', editor: 'editor reviewed', excerpt: 'publisher summary',
+    covered: n => `Covered by ${n} outlet${n === 1 ? '' : 's'}`, left: 'left', centre: 'centre', right: 'right', official: 'official',
+    readAt: s => `Read the full story at ${s}`, tap: 'Tap here', end: "You're all caught up", endSub: 'Check back soon for new stories.',
+    empty: 'No stories here yet. Try another category from the menu.', noSaved: 'Nothing saved yet. Tap the bookmark on any story.',
+    offline: 'Cannot reach the server. Is PowerShell still running uvicorn?', offlineWeb: 'Could not load the news. Check your internet and try again.', savedT: 'Saved', unsavedT: 'Removed', copied: 'Link copied',
+    waiting: n => `${n} big ${n === 1 ? 'story is' : 'stories are'} waiting for editor approval.`, open: 'Open editor',
+    ago: (v, u) => ({ m: `${v} min ago`, h: `${v}h ago`, d: `${v}d ago` }[u]), now: 'just now',
+  },
+  fr: {
+    tagline: "L'actualité canadienne en 60 mots", langQ: 'Choisissez votre langue', langSub: 'Vous pourrez la changer dans le menu.',
+    soon: 'Bientôt', next: 'Continuer', provQ: 'Où habitez-vous?', provSub: 'Nous ajoutons les nouvelles de votre province.',
+    skip: 'Passer', topicsQ: 'Qu’aimez-vous lire?', topicsSub: 'Choisissez-en au moins 1. Modifiable dans le menu.', start: 'Commencer la lecture',
+    myFeed: 'Mon fil', allNews: 'Toutes les nouvelles', saved: 'Articles enregistrés', feeds: 'Fils', cats: 'Catégories', settings: 'Paramètres',
+    language: 'Langue', province: 'Province', editTopics: 'Modifier mes sujets', none: 'Non défini', menu: 'Menu',
+    shortBy: 'résumé par', ai: 'résumé par IA', editor: 'révisé par un éditeur', excerpt: "résumé de l'éditeur",
+    covered: n => `Couvert par ${n} média${n === 1 ? '' : 's'}`, left: 'gauche', centre: 'centre', right: 'droite', official: 'officiel',
+    readAt: s => `Lire l'article complet sur ${s}`, tap: 'Touchez ici', end: 'Vous êtes à jour', endSub: 'Revenez bientôt pour de nouvelles nouvelles.',
+    empty: 'Aucune nouvelle ici. Essayez une autre catégorie dans le menu.', noSaved: 'Rien d’enregistré. Touchez le signet sur une nouvelle.',
+    offline: 'Serveur injoignable. PowerShell exécute-t-il toujours uvicorn?', offlineWeb: 'Impossible de charger les nouvelles. Vérifiez votre connexion.', savedT: 'Enregistré', unsavedT: 'Retiré', copied: 'Lien copié',
+    waiting: n => `${n} grande${n > 1 ? 's' : ''} nouvelle${n > 1 ? 's' : ''} en attente d'approbation.`, open: "Ouvrir l'éditeur",
+    ago: (v, u) => ({ m: `il y a ${v} min`, h: `il y a ${v} h`, d: `il y a ${v} j` }[u]), now: "à l'instant",
+  },
+};
+const LANGS = [
+  { id: 'en', name: 'English', ready: true }, { id: 'fr', name: 'Français', ready: true },
+  { id: 'ar', name: 'العربية', ready: false }, { id: 'hi', name: 'हिन्दी', ready: false }, { id: 'pa', name: 'ਪੰਜਾਬੀ', ready: false },
+];
+const PROV = { ON: ['Ontario','Ontario'], QC: ['Quebec','Québec'], BC: ['British Columbia','Colombie-Britannique'],
+  AB: ['Alberta','Alberta'], MB: ['Manitoba','Manitoba'], SK: ['Saskatchewan','Saskatchewan'], NS: ['Nova Scotia','Nouvelle-Écosse'],
+  NB: ['New Brunswick','Nouveau-Brunswick'], NL: ['Newfoundland and Labrador','Terre-Neuve-et-Labrador'],
+  PE: ['Prince Edward Island','Île-du-Prince-Édouard'], YT: ['Yukon','Yukon'], NT: ['Northwest Territories','Territoires du Nord-Ouest'], NU: ['Nunavut','Nunavut'] };
+const SKIP_TOPICS = ['top', 'province'];
+
+/* ---------- saved settings (this browser only) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  clear() { try { ['cs2_lang','cs2_prov','cs2_topics','cs2_done','cs2_saved'].forEach(k => localStorage.removeItem(k)); } catch {} },
+};
+let lang = store.get('cs2_lang', 'en'), province = store.get('cs2_prov', ''), topics = store.get('cs2_topics', []);
+let saved = store.get('cs2_saved', []);
+let view = 'myfeed', cats = [], current = [];
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const t = () => T[lang];
+const pname = c => PROV[c] ? PROV[c][lang === 'fr' ? 1 : 0] : c;
+const safeUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+function toast(msg) { const x = $('toast'); x.textContent = msg; x.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => x.classList.remove('show'), 1400); }
+function ago(iso) {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return t().now;
+  if (s < 3600) return t().ago(Math.floor(s / 60), 'm');
+  if (s < 86400) return t().ago(Math.floor(s / 3600), 'h');
+  return t().ago(Math.floor(s / 86400), 'd');
+}
+const icon = d => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('fill', 'none'); s.setAttribute('stroke', '#1c1c1e'); s.setAttribute('stroke-width', '1.8'); s.setAttribute('stroke-linejoin', 'round');
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); s.append(p); return s; };
+const BOOK = 'M7 3h10v18l-5-4-5 4z', BOOK_ON = 'M7 3h10v18l-5-4-5 4z';
+const SHARE = 'M18 8a3 3 0 1 0-2.8-4M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4';
+
+/* ---------- one news card ---------- */
+function card(st) {
+  const c = el('article', 'card');
+  const pic = el('div', 'pic'), img = st.image_url && safeUrl(st.image_url);
+  if (img) pic.style.backgroundImage = `url("${img.replace(/"/g, '%22')}")`; else { pic.classList.add('empty'); pic.textContent = st.lead_source || ''; }
+  const src = el('div', 'tab src'); src.append(el('i', null, (st.lead_source || '?').trim()[0]), el('span', null, st.lead_source)); pic.append(src);
+  const act = el('div', 'tab act');
+  const bm = el('button'); bm.setAttribute('aria-label', 'Bookmark');
+  const paintBm = () => { bm.replaceChildren(icon(BOOK)); if (saved.some(x => x.id === st.id)) bm.firstChild.setAttribute('fill', '#1c1c1e'); };
+  paintBm();
+  bm.onclick = () => {
+    const on = saved.some(x => x.id === st.id);
+    saved = on ? saved.filter(x => x.id !== st.id) : [st, ...saved];
+    store.set('cs2_saved', saved); paintBm(); toast(on ? t().unsavedT : t().savedT);
+  };
+  const sh = el('button'); sh.setAttribute('aria-label', 'Share'); sh.append(icon(SHARE));
+  sh.onclick = async () => {
+    const data = { title: st.headline, text: st.headline + ' — Canada Shorts', url: st.read_more_url };
+    try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(st.read_more_url); toast(t().copied); } } catch {}
+  };
+  act.append(bm, sh); pic.append(act);
+  c.append(pic);
+
+  const body = el('div', 'content');
+  body.append(el('h2', null, st.headline), el('p', null, st.summary));
+  const by = st.summary_by === 'editor' ? t().editor : st.summary_by === 'ai' ? t().ai : t().excerpt;
+  const line = el('div', 'byline'); line.append(el('b', null, t().shortBy + ' Canada Shorts'), document.createTextNode(` / ${ago(st.published_at)} · ${by}`));
+  body.append(line);
+  const m = st.bias, sides = m.left + m.centre + m.right;
+  const cov = el('div', 'cover');
+  if (sides) {
+    const mini = el('span', 'mini');
+    [['left', '--left'], ['centre', '--centre'], ['right', '--right']].forEach(([k, v]) => { if (m[k]) { const i = el('i'); i.style.flex = m[k]; i.style.background = `var(${v})`; mini.append(i); } });
+    cov.append(mini);
+  }
+  const parts = [];
+  ['left', 'centre', 'right', 'official'].forEach(k => { if (m[k]) parts.push(`${m[k]} ${t()[k]}`); });
+  cov.append(document.createTextNode(t().covered(m.total) + (parts.length ? ' (' + parts.join(', ') + ')' : '')));
+  body.append(cov);
+  c.append(body);
+
+  const url = safeUrl(st.read_more_url);
+  const more = el('button', 'more');
+  if (img) more.style.backgroundImage = `url("${img.replace(/"/g, '%22')}")`;
+  more.append(el('span', null, t().readAt(st.lead_source)), el('small', null, t().tap));
+  more.onclick = () => { if (url) window.open(url, '_blank', 'noopener'); };
+  c.append(more);
+  return c;
+}
+
+/* ---------- feed ---------- */
+function viewName() {
+  if (view === 'myfeed') return t().myFeed;
+  if (view === 'top') return t().allNews;
+  if (view === 'saved') return t().saved;
+  if (view === 'province') return pname(province);
+  const c = cats.find(x => x.id === view); return c ? c.label : view;
+}
+function render(stories, emptyMsg) {
+  const feed = $('feed'); feed.replaceChildren();
+  if (!stories.length) { feed.append(el('div', 'msg', emptyMsg)); return; }
+  stories.forEach(s => feed.append(card(s)));
+  const end = el('div', 'end'); const box = el('div'); box.append(el('h2', null, t().end), el('p', null, t().endSub)); end.append(box); feed.append(end);
+  feed.scrollTop = 0;
+}
+/* Online version (GitHub Pages): news comes as ready-made files and is filtered here. */
+const STATIC = !!window.CS_STATIC;
+const fileCache = {};
+async function staticFeed() {
+  const key = 'feed_' + lang;
+  if (!fileCache[key]) fileCache[key] = (await (await fetch(`data/${key}.json`, { cache: 'no-cache' })).json()).stories;
+  const all = fileCache[key], inProv = s => province && s.provinces.includes(province);
+  let list;
+  if (view === 'myfeed') list = all.filter(s => topics.includes(s.category) || inProv(s));
+  else if (view === 'top') list = all;
+  else if (view === 'province') list = all.filter(inProv);
+  else list = all.filter(s => s.category === view);
+  if (province) list = [...list].sort((a, b) => b.rank * (inProv(b) ? 1.4 : 1) - a.rank * (inProv(a) ? 1.4 : 1));  // local news gets a boost
+  return list.slice(0, 80);
+}
+async function loadFeed() {
+  $('titleText').textContent = viewName();
+  if (view === 'saved') { $('banner').hidden = true; render(saved.filter(s => s.lang === lang), t().noSaved); return; }
+  $('feed').replaceChildren(el('div', 'msg', '…'));
+  if (STATIC) {
+    try { render(await staticFeed(), t().empty); } catch { $('feed').replaceChildren(el('div', 'msg', t().offlineWeb)); }
+    return;
+  }
+  try {
+    const q = new URLSearchParams({ lang, category: view, limit: 60 });
+    if (province) q.set('province', province);
+    if (view === 'myfeed') q.set('categories', topics.join(','));
+    const [r, w] = await Promise.all([fetch('/feed?' + q), fetch('/waiting?lang=' + lang)]);
+    const data = await r.json(), wait = await w.json();
+    render(data.stories, t().empty);
+    const ban = $('banner');
+    if (wait.waiting > 0) {
+      ban.replaceChildren(document.createTextNode(t().waiting(wait.waiting) + ' '));
+      const a = el('a', null, t().open); a.href = '/admin'; a.target = '_blank'; ban.append(a); ban.hidden = false;
+    } else ban.hidden = true;
+  } catch { $('feed').replaceChildren(el('div', 'msg', t().offline)); }
+}
+async function loadCats() { cats = await (await fetch(STATIC ? `data/categories_${lang}.json` : '/categories?lang=' + lang)).json(); }
+if (STATIC) document.getElementById('adminTip').remove();
+
+/* ---------- right-side menu ---------- */
+function openMenu(on) { $('screen').classList.toggle('menu-open', on); }
+function buildMenu() {
+  const nav = $('nav'); nav.replaceChildren(); $('menuTitle').textContent = t().menu;
+  const item = (label, on, fn, extra) => { const b = el('button', 'item' + (on ? ' on' : ''), label); if (extra) b.append(el('em', null, extra)); b.onclick = fn; nav.append(b); };
+  const go = v => () => { view = v; openMenu(false); buildMenu(); loadFeed(); };
+  nav.append(el('h3', null, t().feeds));
+  item(t().myFeed, view === 'myfeed', go('myfeed'));
+  item(t().allNews, view === 'top', go('top'));
+  if (province) item(pname(province), view === 'province', go('province'));
+  item(t().saved, view === 'saved', go('saved'), String(saved.filter(s => s.lang === lang).length || ''));
+  nav.append(el('h3', null, t().cats));
+  cats.filter(c => !SKIP_TOPICS.includes(c.id)).forEach(c => item(c.label, view === c.id, go(c.id)));
+  nav.append(el('h3', null, t().settings));
+  item(t().language, false, () => { openMenu(false); onboarding(0, true); }, LANGS.find(l => l.id === lang).name);
+  item(t().province, false, () => { openMenu(false); onboarding(1, true); }, province ? pname(province) : t().none);
+  item(t().editTopics, false, () => { openMenu(false); onboarding(2, true); }, String(topics.length));
+}
+
+/* ---------- first-time setup: language → province → topics ---------- */
+async function onboarding(step, single) {
+  const box = $('onb'); box.hidden = false; box.replaceChildren();
+  const tt = t();
+  box.append(Object.assign(el('div', 'logo'), { innerHTML: 'Canada <span>Shorts</span>' }), el('div', 'tag', tt.tagline));
+  if (!single) { const d = el('div', 'dots'); [0, 1, 2].forEach(i => d.append(el('i', i <= step ? 'on' : ''))); box.append(d); }
+  const finish = async () => {
+    store.set('cs2_done', true); box.hidden = true; await loadCats(); view = 'myfeed'; buildMenu(); loadFeed();
+  };
+  const nextStep = () => single ? finish() : onboarding(step + 1, false);
+
+  if (step === 0) {
+    box.append(el('h2', null, tt.langQ), el('p', 'sub', tt.langSub));
+    const opts = el('div', 'opts');
+    LANGS.forEach(L => {
+      const b = el('button', 'opt' + (L.id === lang ? ' on' : ''), L.name);
+      if (!L.ready) { b.disabled = true; b.append(el('em', null, tt.soon)); }
+      b.onclick = () => { lang = L.id; store.set('cs2_lang', lang); document.documentElement.lang = lang; onboarding(0, single); };
+      opts.append(b);
+    });
+    const go = el('button', 'go', tt.next); go.onclick = nextStep;
+    box.append(opts, go);
+  } else if (step === 1) {
+    box.append(el('h2', null, tt.provQ), el('p', 'sub', tt.provSub));
+    const grid = el('div', 'opts');
+    Object.keys(PROV).forEach(code => {
+      const b = el('button', 'opt' + (code === province ? ' on' : ''), pname(code));
+      b.onclick = () => { province = code; store.set('cs2_prov', province); onboarding(1, single); };
+      grid.append(b);
+    });
+    const go = el('button', 'go', tt.next); go.disabled = !province; go.onclick = nextStep;
+    const sk = el('button', 'skip', tt.skip); sk.onclick = () => { province = ''; store.set('cs2_prov', ''); nextStep(); };
+    box.append(grid, go, sk);
+  } else {
+    await loadCats();
+    box.append(el('h2', null, tt.topicsQ), el('p', 'sub', tt.topicsSub));
+    const grid = el('div', 'opts grid');
+    const go = el('button', 'go', tt.start);
+    const paint = () => { go.disabled = topics.length === 0; };
+    cats.filter(c => !SKIP_TOPICS.includes(c.id)).forEach(c => {
+      const b = el('button', 'chip' + (topics.includes(c.id) ? ' on' : ''), c.label);
+      b.onclick = () => {
+        topics = topics.includes(c.id) ? topics.filter(x => x !== c.id) : [...topics, c.id];
+        store.set('cs2_topics', topics); b.classList.toggle('on'); paint();
+      };
+      grid.append(b);
+    });
+    go.onclick = finish; paint();
+    box.append(grid, go);
+  }
+}
+
+/* ---------- phone sizes (CSS pixels of the real screens) ---------- */
+const DEVICES = {
+  iphone: { name: 'iPhone 15', w: 393, h: 852, r: 58, sb: 54, kind: 'island' },
+  galaxy: { name: 'Samsung Galaxy S24', w: 360, h: 780, r: 46, sb: 32, kind: 'punch' },
+  pixel:  { name: 'Google Pixel 8', w: 412, h: 915, r: 50, sb: 36, kind: 'punch' },
+};
+let device = store.get('cs2_device', 'iphone');
+function fit() {
+  const d = DEVICES[device] || DEVICES.iphone, phone = $('phone'), stage = $('stage');
+  const real = window.innerWidth < 600;  // opened on an actual phone: use the whole screen
+  document.body.classList.toggle('real', real);
+  document.body.classList.remove('island', 'punch'); document.body.classList.add(d.kind);
+  if (real) {
+    phone.style.setProperty('--w', window.innerWidth); phone.style.setProperty('--h', window.innerHeight);
+    phone.style.setProperty('--sb', 0); stage.style.width = '100%'; stage.style.height = window.innerHeight + 'px'; return;
+  }
+  ['w', 'h', 'r', 'sb'].forEach(k => phone.style.setProperty('--' + k, d[k]));
+  const W = d.w + 24, H = d.h + 24, s = Math.min(1, (window.innerHeight - 40) / H);
+  phone.style.transform = `scale(${s})`;
+  stage.style.width = W * s + 'px'; stage.style.height = H * s + 'px';
+}
+function deviceButtons() {
+  const box = $('devices'); box.replaceChildren();
+  Object.entries(DEVICES).forEach(([id, d]) => {
+    const b = el('button', id === device ? 'on' : '', d.name);
+    b.onclick = () => { device = id; store.set('cs2_device', id); deviceButtons(); fit(); };
+    box.append(b);
+  });
+}
+function tick() { const n = new Date(); $('clock').textContent = n.getHours() + ':' + String(n.getMinutes()).padStart(2, '0'); }
+deviceButtons(); fit(); tick(); setInterval(tick, 30000);
+window.addEventListener('resize', fit);
+
+/* ---------- wiring ---------- */
+$('menuBtn').onclick = () => { buildMenu(); openMenu(true); };
+$('closeBtn').onclick = () => openMenu(false);
+$('shade').onclick = () => openMenu(false);
+$('resetBtn').onclick = () => { store.clear(); location.reload(); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') openMenu(false);
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  const f = $('feed'); e.preventDefault();
+  f.scrollBy({ top: (e.key === 'ArrowDown' ? 1 : -1) * f.clientHeight, behavior: 'smooth' });
+});
+(async () => {
+  document.documentElement.lang = lang;
+  if (!store.get('cs2_done', false) || !topics.length) { onboarding(0, false); return; }
+  try { await loadCats(); } catch {}
+  buildMenu(); loadFeed();
+})();
+</script>
+</body>
+</html>
