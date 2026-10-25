@@ -12,8 +12,8 @@ import sys
 
 APP_NAME = os.getenv("APP_NAME", "Canada Shorts")
 APP_ID = os.getenv("APP_ID", "ca.canadashorts.news")
-# Google's official TEST AdMob app ID. Replace with yours from admob.google.com at launch.
-ADMOB_APP_ID = os.getenv("ADMOB_APP_ID", "ca-app-pub-3940256099942544~3347511713")
+# AdMob app ID: only added when ads are switched on (set ADMOB_APP_ID in the workflow).
+ADMOB_APP_ID = os.getenv("ADMOB_APP_ID", "")
 
 manifest_path = "android/app/src/main/AndroidManifest.xml"
 m = open(manifest_path, encoding="utf-8").read()
@@ -23,10 +23,17 @@ m = re.sub(r'android:label="[^"]*"', f'android:label="{APP_NAME}"', m, count=1)
 if "android.permission.INTERNET" not in m:
     m = m.replace("<application", '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
 
-if "com.google.android.gms.ads.APPLICATION_ID" not in m:
+if ADMOB_APP_ID and "com.google.android.gms.ads.APPLICATION_ID" not in m:
     meta = (f'\n        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"'
             f' android:value="{ADMOB_APP_ID}"/>')
     m = re.sub(r"(<application[^>]*>)", r"\1" + meta, m, count=1)
+
+# Use the older, widely compatible graphics engine (avoids start-up crashes on
+# some older Samsung / Mali phones).
+if "EnableImpeller" not in m:
+    m = re.sub(r"(<application[^>]*>)",
+               r'\1\n        <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false"/>',
+               m, count=1)
 
 extra_queries = """
         <intent>

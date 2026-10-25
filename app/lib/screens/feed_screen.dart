@@ -4,7 +4,6 @@ import '../config.dart';
 import '../models/story.dart';
 import '../services/api_client.dart';
 import '../services/app_state.dart';
-import '../widgets/ad_card.dart';
 import '../widgets/story_card.dart';
 import 'onboarding_screen.dart';
 import 'settings_screen.dart';
@@ -123,12 +122,7 @@ class _FeedScreenState extends State<FeedScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final s = st.s;
     final stories = _stories();
-    // Mix in one ad card after every [adEvery] stories (not in Saved).
-    final items = <Object>[];
-    for (var i = 0; i < stories.length; i++) {
-      items.add(stories[i]);
-      if (view != 'saved' && (i + 1) % adEvery == 0 && i + 1 < stories.length) items.add('ad');
-    }
+    final items = stories; // ads can be mixed in here later
 
     Widget body;
     if (stories.isEmpty) {
@@ -160,9 +154,7 @@ class _FeedScreenState extends State<FeedScreen> with WidgetsBindingObserver {
           itemCount: items.length + 1,
           itemBuilder: (context, i) {
             if (i == items.length) return _endCard();
-            final item = items[i];
-            if (item is Story) return StoryCard(story: item, state: st);
-            return AdCard(s: s);
+            return StoryCard(story: items[i], state: st);
           },
         ),
       );

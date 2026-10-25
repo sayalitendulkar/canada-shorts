@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart' show MobileAds;
 
 import 'screens/feed_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -11,7 +8,6 @@ import 'services/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  unawaited(MobileAds.instance.initialize());
   final state = AppState();
   await state.load();
   runApp(CanadaShortsApp(state: state, news: NewsService()));
