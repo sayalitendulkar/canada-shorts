@@ -19,10 +19,13 @@ from .summarize import ai_enabled, summarize
 log = logging.getLogger(__name__)
 
 
-def _ai_used_today(conn) -> tuple[str, int]:
-    key = "ai_count_" + datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
-    return key, int(row["value"]) if row else 0
+def _ai_used_today(conn) -> dict[str, int]:
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    used = {}
+    for lang in ("en", "fr"):
+        row = conn.execute("SELECT value FROM meta WHERE key = ?", (f"ai_count_{lang}_{day}",)).fetchone()
+        used[lang] = int(row["value"]) if row else 0
+    return used
 
 
 def _readable_text(arts, paywalled: set[str]) -> str:
@@ -58,7 +61,7 @@ def process_stories(conn) -> dict:
             work.append((story, arts, len({a["source_name"] for a in arts})))
     work.sort(key=lambda w: (w[2], w[1][0]["published_at"]), reverse=True)
 
-    quota_key, used = _ai_used_today(conn)
+    used = _ai_used_today(conn)  # separate daily quotas for English and French
     ai_blocked = not ai_enabled()
     for story, arts, n_outlets in work:
         lead = arts[0]  # newest article: freshest headline and facts
@@ -70,13 +73,14 @@ def process_stories(conn) -> dict:
             result = {"headline": story["headline"], "summary": story["summary"], "summary_by": "editor", "problems": []}
         else:
             result = None
-            want_ai = fresh and not ai_blocked and used < config.AI_DAILY_LIMIT
+            lang = story["lang"]
+            want_ai = fresh and not ai_blocked and used[lang] < config.ai_limit(lang)
             if want_ai:
                 full_text = _readable_text(arts, paywalled)
                 excerpt_words = sum(len(a["excerpt"].split()) for a in arts)
                 if full_text or excerpt_words >= 80:
                     try:
-                        used += 1
+                        used[lang] += 1
                         result = summarize(arts, story["lang"], full_text)
                         if result["summary_by"] == "ai":
                             stats["ai_written"] += 1
@@ -111,7 +115,9 @@ def process_stories(conn) -> dict:
                 now.isoformat(), story["id"],
             ),
         )
-    conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (quota_key, str(used)))
+    day = now.strftime("%Y-%m-%d")
+    for lang, n in used.items():
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (f"ai_count_{lang}_{day}", str(n)))
     return stats
 
 

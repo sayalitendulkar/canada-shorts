@@ -194,7 +194,7 @@ const T = {
     tagline: "Canada's news in 60 words", langQ: 'Choose your language', langSub: 'You can change this later in the menu.',
     soon: 'Coming soon', next: 'Continue', provQ: 'Where do you live?', provSub: 'We add local news from your province.',
     skip: 'Skip', topicsQ: 'What do you like to read?', topicsSub: 'Pick at least 1. Change anytime from the menu.', start: 'Start reading',
-    myFeed: 'My Feed', allNews: 'All news', saved: 'Saved stories', feeds: 'Feeds', cats: 'Categories', settings: 'Settings',
+    updated: w => `News updated ${w}`, myFeed: 'My Feed', allNews: 'All news', saved: 'Saved stories', feeds: 'Feeds', cats: 'Categories', settings: 'Settings',
     language: 'Language', province: 'Province', editTopics: 'Edit my topics', none: 'Not set', menu: 'Menu',
     shortBy: 'short by', ai: 'AI summary', editor: 'editor reviewed', excerpt: 'publisher summary',
     covered: n => `Covered by ${n} outlet${n === 1 ? '' : 's'}`, left: 'left', centre: 'centre', right: 'right', official: 'official',
@@ -208,7 +208,7 @@ const T = {
     tagline: "L'actualité canadienne en 60 mots", langQ: 'Choisissez votre langue', langSub: 'Vous pourrez la changer dans le menu.',
     soon: 'Bientôt', next: 'Continuer', provQ: 'Où habitez-vous?', provSub: 'Nous ajoutons les nouvelles de votre province.',
     skip: 'Passer', topicsQ: 'Qu’aimez-vous lire?', topicsSub: 'Choisissez-en au moins 1. Modifiable dans le menu.', start: 'Commencer la lecture',
-    myFeed: 'Mon fil', allNews: 'Toutes les nouvelles', saved: 'Articles enregistrés', feeds: 'Fils', cats: 'Catégories', settings: 'Paramètres',
+    updated: w => `Nouvelles mises à jour ${w}`, myFeed: 'Mon fil', allNews: 'Toutes les nouvelles', saved: 'Articles enregistrés', feeds: 'Fils', cats: 'Catégories', settings: 'Paramètres',
     language: 'Langue', province: 'Province', editTopics: 'Modifier mes sujets', none: 'Non défini', menu: 'Menu',
     shortBy: 'résumé par', ai: 'résumé par IA', editor: 'révisé par un éditeur', excerpt: "résumé de l'éditeur",
     covered: n => `Couvert par ${n} média${n === 1 ? '' : 's'}`, left: 'gauche', centre: 'centre', right: 'droite', official: 'officiel',
@@ -237,7 +237,7 @@ const store = {
 };
 let lang = store.get('cs2_lang', 'en'), province = store.get('cs2_prov', ''), topics = store.get('cs2_topics', []);
 let saved = store.get('cs2_saved', []);
-let view = 'myfeed', cats = [], current = [];
+let view = 'myfeed', cats = [], current = [], lastUpdated = null;
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -328,7 +328,7 @@ const STATIC = !!window.CS_STATIC;
 const fileCache = {};
 async function staticFeed() {
   const key = 'feed_' + lang;
-  if (!fileCache[key]) fileCache[key] = (await (await fetch(`data/${key}.json`, { cache: 'no-cache' })).json()).stories;
+  if (!fileCache[key]) { const d = await (await fetch(`data/${key}.json`, { cache: 'no-cache' })).json(); fileCache[key] = d.stories; lastUpdated = d.generated_at; }
   const all = fileCache[key], inProv = s => province && s.provinces.includes(province);
   let list;
   if (view === 'myfeed') list = all.filter(s => topics.includes(s.category) || inProv(s));
@@ -367,6 +367,7 @@ if (STATIC) document.getElementById('adminTip').remove();
 function openMenu(on) { $('screen').classList.toggle('menu-open', on); }
 function buildMenu() {
   const nav = $('nav'); nav.replaceChildren(); $('menuTitle').textContent = t().menu;
+  if (lastUpdated) { const u = el('div', 'byline', t().updated(ago(lastUpdated))); u.style.margin = '12px 20px 0'; nav.append(u); }
   const item = (label, on, fn, extra) => { const b = el('button', 'item' + (on ? ' on' : ''), label); if (extra) b.append(el('em', null, extra)); b.onclick = fn; nav.append(b); };
   const go = v => () => { view = v; openMenu(false); buildMenu(); loadFeed(); };
   nav.append(el('h3', null, t().feeds));

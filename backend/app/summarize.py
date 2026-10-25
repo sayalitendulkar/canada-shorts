@@ -28,7 +28,8 @@ PROMPT = {
 2. "summary": between 50 and {max_words} words, so a reader understands the whole story without opening the article:
    who, what, where, when, key numbers, and why it matters to Canadians.
 Rules: facts only; attribute claims and opinions to who made them ("Ottawa says", "critics argue");
-no adjectives that take a side; no information that is not in the source text; Canadian spelling.
+no adjectives that take a side; no information that is not in the source text;
+Canadian Press style: Canadian spelling (centre, colour, defence, criticize), "per cent" not "percent".
 Return JSON only: {{"headline": "...", "summary": "..."}}
 
 Sources:
@@ -38,7 +39,7 @@ Sources:
 2. "summary" : entre 50 et {max_words} mots, pour que le lecteur comprenne toute la nouvelle sans ouvrir l'article :
    qui, quoi, où, quand, les chiffres clés, et pourquoi c'est important pour les Canadiens.
 Règles : faits seulement; attribue les affirmations et opinions à leur auteur (« Ottawa affirme », « selon les critiques »);
-aucun adjectif partisan; aucune information absente du texte source.
+aucun adjectif partisan; aucune information absente du texte source; style de La Presse canadienne (« 2,25 % »).
 Réponds seulement en JSON : {{"headline": "...", "summary": "..."}}
 
 Sources :

@@ -7,13 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n.dart';
 import '../models/story.dart';
 
-/// Reader settings, bookmarks and the offline cache. Stored only on the
-/// device: no account, no location tracking (privacy by default, Law 25).
+/// Reader choices and saved stories. Stored only on the phone: no account,
+/// no location tracking.
 class AppState extends ChangeNotifier {
   late SharedPreferences _p;
 
   String lang = 'en';
   String? province;
+  List<String> topics = [];
   bool darkMode = false;
   bool onboarded = false;
   final List<Story> bookmarks = [];
@@ -25,8 +26,9 @@ class AppState extends ChangeNotifier {
     final deviceFr = PlatformDispatcher.instance.locale.languageCode == 'fr';
     lang = _p.getString('lang') ?? (deviceFr ? 'fr' : 'en');
     province = _p.getString('province');
+    topics = _p.getStringList('topics') ?? [];
     darkMode = _p.getBool('dark') ?? false;
-    onboarded = _p.getBool('onboarded') ?? false;
+    onboarded = (_p.getBool('onboarded') ?? false) && topics.isNotEmpty;
     bookmarks
       ..clear()
       ..addAll(_decode(_p.getString('bookmarks')));
@@ -57,6 +59,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setTopics(List<String> v) async {
+    topics = List.of(v);
+    await _p.setStringList('topics', topics);
+    notifyListeners();
+  }
+
   Future<void> setDark(bool v) async {
     darkMode = v;
     await _p.setBool('dark', v);
@@ -69,21 +77,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isSaved(Story st) => bookmarks.any((b) => b.id == st.id);
+  bool isSaved(Story st) => bookmarks.any((b) => b.id == st.id && b.lang == st.lang);
 
-  Future<void> toggleBookmark(Story st) async {
-    if (isSaved(st)) {
-      bookmarks.removeWhere((b) => b.id == st.id);
+  Future<bool> toggleBookmark(Story st) async {
+    final was = isSaved(st);
+    if (was) {
+      bookmarks.removeWhere((b) => b.id == st.id && b.lang == st.lang);
     } else {
       bookmarks.insert(0, st);
     }
     await _p.setString('bookmarks', jsonEncode(bookmarks.map((b) => b.toJson()).toList()));
     notifyListeners();
+    return !was;
   }
-
-  // Offline cache: the last 100 cards per language + category.
-  Future<void> cacheFeed(String key, List<Story> stories) =>
-      _p.setString('cache_$key', jsonEncode(stories.take(100).map((x) => x.toJson()).toList()));
-
-  List<Story> cachedFeed(String key) => _decode(_p.getString('cache_$key'));
 }

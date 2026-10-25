@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../models/story.dart';
 
-/// "8 sources · Left 3 · Centre 3 · Right 2" with a proportional bar.
-class BiasBar extends StatelessWidget {
-  const BiasBar({super.key, required this.bias, required this.s});
+/// "▬ Covered by 3 outlets (1 left, 1 centre, 1 right)"
+class CoverageLine extends StatelessWidget {
+  const CoverageLine({super.key, required this.bias, required this.s});
   final BiasMix bias;
   final S s;
 
@@ -15,43 +15,40 @@ class BiasBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final sides = bias.left + bias.centre + bias.right;
-    final small = Theme.of(context).textTheme.labelSmall;
-    final count = '${bias.total} ${bias.total == 1 ? s.t('source') : s.t('sources')}';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final parts = <String>[
+      if (bias.left > 0) '${bias.left} ${s.t('left')}',
+      if (bias.centre > 0) '${bias.centre} ${s.t('centre')}',
+      if (bias.right > 0) '${bias.right} ${s.t('right')}',
+      if (bias.official > 0) '${bias.official} ${s.t('official')}',
+    ];
+    return Row(
       children: [
         if (sides > 0)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: SizedBox(
-              height: 6,
-              child: Row(children: [
-                if (bias.left > 0) Expanded(flex: bias.left, child: Container(color: leftColor)),
-                if (bias.centre > 0) Expanded(flex: bias.centre, child: Container(color: centreColor)),
-                if (bias.right > 0) Expanded(flex: bias.right, child: Container(color: rightColor)),
-              ]),
-            ),
-          ),
-        const SizedBox(height: 4),
-        Text(
-          [
-            count,
-            if (bias.left > 0) '${s.t('left')} ${bias.left}',
-            if (bias.centre > 0) '${s.t('centre')} ${bias.centre}',
-            if (bias.right > 0) '${s.t('right')} ${bias.right}',
-            if (bias.official > 0) '${s.t('official')} ${bias.official}',
-          ].join(' · '),
-          style: small,
-        ),
-        if (bias.blindspot != null)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              s.t(bias.blindspot == 'mostly_left' ? 'blindLeft' : 'blindRight'),
-              style: small?.copyWith(fontStyle: FontStyle.italic),
+            padding: const EdgeInsets.only(right: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: SizedBox(
+                width: 54,
+                height: 5,
+                child: Row(children: [
+                  if (bias.left > 0) Expanded(flex: bias.left, child: Container(color: leftColor)),
+                  if (bias.centre > 0) Expanded(flex: bias.centre, child: Container(color: centreColor)),
+                  if (bias.right > 0) Expanded(flex: bias.right, child: Container(color: rightColor)),
+                ]),
+              ),
             ),
           ),
+        Expanded(
+          child: Text(
+            s.covered(bias.total) + (parts.isEmpty ? '' : ' (${parts.join(', ')})'),
+            style: TextStyle(fontSize: 12, color: muted),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

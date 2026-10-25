@@ -1,5 +1,5 @@
-/// All UI text in English and French. French must be complete (Quebec Charter
-/// of the French Language); have a native speaker review before launch.
+/// All app text in English and French (Quebec requires full French).
+/// Have a native French speaker review before launch.
 class S {
   S(this.lang);
   final String lang;
@@ -10,108 +10,146 @@ class S {
 
   static const _en = {
     'appName': 'Canada Shorts',
-    'welcome': 'Canada\'s news in 60 words',
-    'chooseLang': 'Choose your language',
-    'chooseProvince': 'Where do you live?',
-    'provinceHint': 'We use this to show local stories. You can change it any time.',
+    'tagline': "Canada's news in 60 words",
+    'langQ': 'Choose your language',
+    'langSub': 'You can change this later in the menu.',
+    'soon': 'Coming soon',
+    'next': 'Continue',
+    'provQ': 'Where do you live?',
+    'provSub': 'We add local news from your province.',
     'skip': 'Skip',
+    'topicsQ': 'What do you like to read?',
+    'topicsSub': 'Pick at least 1. Change anytime from the menu.',
     'start': 'Start reading',
-    'readMore': 'Read full story',
-    'sources': 'sources',
-    'source': 'source',
-    'left': 'Left',
-    'centre': 'Centre',
-    'right': 'Right',
-    'official': 'Official',
-    'blindLeft': 'Covered mostly by left-leaning outlets',
-    'blindRight': 'Covered mostly by right-leaning outlets',
-    'aiLabel': 'Summary by AI from publisher feeds',
-    'editorLabel': 'Summary reviewed by an editor',
-    'excerptLabel': 'Excerpt from the publisher',
-    'report': 'Report this summary',
-    'reportHint': 'What\'s wrong? (e.g. a wrong fact, biased wording)',
-    'send': 'Send',
-    'cancel': 'Cancel',
-    'thanks': 'Thanks — an editor will check it.',
-    'saved': 'Saved',
-    'bookmarks': 'Saved stories',
-    'noBookmarks': 'Nothing saved yet. Tap the bookmark on any card.',
-    'settings': 'Settings',
+    'myFeed': 'My Feed',
+    'allNews': 'All news',
+    'saved': 'Saved stories',
+    'feeds': 'FEEDS',
+    'cats': 'CATEGORIES',
+    'settings': 'SETTINGS',
+    'menu': 'Menu',
     'language': 'Language',
-    'province': 'Province or territory',
+    'province': 'Province',
+    'editTopics': 'Edit my topics',
     'none': 'Not set',
-    'darkMode': 'Dark mode',
-    'about': 'About and contact',
+    'about': 'About, contact and privacy',
     'aboutText': 'Canada Shorts summarises news from Canadian publishers in 60 words or fewer and links to the original story. Every card names its sources and shows which outlets covered it.',
     'contact': 'Contact us',
     'privacy': 'Privacy policy',
-    'offline': 'Can\'t reach the news server. Showing saved cards.',
-    'empty': 'No stories here yet. Pull down to refresh.',
-    'retry': 'Retry',
-    'allCaughtUp': 'You\'re all caught up',
-    'ago_m': 'm ago',
-    'ago_h': 'h ago',
-    'ago_d': 'd ago',
+    'darkMode': 'Dark mode',
+    'shortBy': 'short by Canada Shorts',
+    'ai': 'AI summary',
+    'editor': 'editor reviewed',
+    'excerpt': 'publisher summary',
+    'left': 'left',
+    'centre': 'centre',
+    'right': 'right',
+    'official': 'official',
+    'readMore': 'Read full story',
+    'tapHere': 'Tap here',
+    'end': "You're all caught up",
+    'endSub': 'Pull down to check for new stories.',
+    'empty': 'No stories here yet. Try another category from the menu.',
+    'noSaved': 'Nothing saved yet. Tap the bookmark on any story.',
+    'offline': "Can't reach the news right now. Showing saved news.",
+    'noNews': "Can't load the news. Check your internet and pull down to try again.",
+    'retry': 'Try again',
+    'savedT': 'Saved',
+    'unsavedT': 'Removed',
+    'copied': 'Link copied',
+    'report': 'Report this summary',
+    'ad': 'Ad',
+    'adNext': 'Swipe up for more news',
     'justNow': 'just now',
   };
 
   static const _fr = {
     'appName': 'Canada Shorts',
-    'welcome': 'L\'actualité canadienne en 60 mots',
-    'chooseLang': 'Choisissez votre langue',
-    'chooseProvince': 'Où habitez-vous?',
-    'provinceHint': 'Nous l\'utilisons pour afficher les nouvelles locales. Vous pouvez le changer en tout temps.',
+    'tagline': "L'actualité canadienne en 60 mots",
+    'langQ': 'Choisissez votre langue',
+    'langSub': 'Vous pourrez la changer dans le menu.',
+    'soon': 'Bientôt',
+    'next': 'Continuer',
+    'provQ': 'Où habitez-vous?',
+    'provSub': 'Nous ajoutons les nouvelles de votre province.',
     'skip': 'Passer',
+    'topicsQ': "Qu'aimez-vous lire?",
+    'topicsSub': 'Choisissez-en au moins 1. Modifiable dans le menu.',
     'start': 'Commencer la lecture',
-    'readMore': 'Lire l\'article complet',
-    'sources': 'sources',
-    'source': 'source',
-    'left': 'Gauche',
-    'centre': 'Centre',
-    'right': 'Droite',
-    'official': 'Officiel',
-    'blindLeft': 'Couvert surtout par des médias de gauche',
-    'blindRight': 'Couvert surtout par des médias de droite',
-    'aiLabel': 'Résumé par IA à partir des fils des éditeurs',
-    'editorLabel': 'Résumé révisé par un éditeur',
-    'excerptLabel': 'Extrait de l\'éditeur',
-    'report': 'Signaler ce résumé',
-    'reportHint': 'Quel est le problème? (ex. fait erroné, formulation biaisée)',
-    'send': 'Envoyer',
-    'cancel': 'Annuler',
-    'thanks': 'Merci — un éditeur va vérifier.',
-    'saved': 'Enregistré',
-    'bookmarks': 'Articles enregistrés',
-    'noBookmarks': 'Rien d\'enregistré. Touchez le signet sur une carte.',
-    'settings': 'Paramètres',
+    'myFeed': 'Mon fil',
+    'allNews': 'Toutes les nouvelles',
+    'saved': 'Articles enregistrés',
+    'feeds': 'FILS',
+    'cats': 'CATÉGORIES',
+    'settings': 'PARAMÈTRES',
+    'menu': 'Menu',
     'language': 'Langue',
-    'province': 'Province ou territoire',
+    'province': 'Province',
+    'editTopics': 'Modifier mes sujets',
     'none': 'Non défini',
-    'darkMode': 'Mode sombre',
-    'about': 'À propos et contact',
-    'aboutText': 'Canada Shorts résume en 60 mots ou moins les nouvelles d\'éditeurs canadiens et renvoie à l\'article original. Chaque carte nomme ses sources et indique quels médias l\'ont couverte.',
+    'about': 'À propos, contact et confidentialité',
+    'aboutText': "Canada Shorts résume en 60 mots ou moins les nouvelles d'éditeurs canadiens et renvoie à l'article original. Chaque carte nomme ses sources et indique quels médias l'ont couverte.",
     'contact': 'Nous joindre',
     'privacy': 'Politique de confidentialité',
-    'offline': 'Serveur injoignable. Affichage des cartes enregistrées.',
-    'empty': 'Aucune nouvelle ici pour l\'instant. Glissez vers le bas pour actualiser.',
+    'darkMode': 'Mode sombre',
+    'shortBy': 'résumé par Canada Shorts',
+    'ai': 'résumé par IA',
+    'editor': 'révisé par un éditeur',
+    'excerpt': "résumé de l'éditeur",
+    'left': 'gauche',
+    'centre': 'centre',
+    'right': 'droite',
+    'official': 'officiel',
+    'readMore': "Lire l'article complet",
+    'tapHere': 'Touchez ici',
+    'end': 'Vous êtes à jour',
+    'endSub': 'Glissez vers le bas pour voir les nouveautés.',
+    'empty': 'Aucune nouvelle ici. Essayez une autre catégorie dans le menu.',
+    'noSaved': "Rien d'enregistré. Touchez le signet sur une nouvelle.",
+    'offline': 'Nouvelles inaccessibles pour le moment. Affichage des nouvelles enregistrées.',
+    'noNews': 'Impossible de charger les nouvelles. Vérifiez votre connexion et glissez vers le bas.',
     'retry': 'Réessayer',
-    'allCaughtUp': 'Vous êtes à jour',
-    'ago_m': 'min',
-    'ago_h': 'h',
-    'ago_d': 'j',
-    'justNow': 'à l\'instant',
+    'savedT': 'Enregistré',
+    'unsavedT': 'Retiré',
+    'copied': 'Lien copié',
+    'report': 'Signaler ce résumé',
+    'ad': 'Annonce',
+    'adNext': 'Glissez vers le haut pour plus de nouvelles',
+    'justNow': "à l'instant",
   };
 
-  String t(String key) => (fr ? _fr : _en)[key] ?? key;
+  String t(String key) => (fr ? _fr : _en)[key] ?? _en[key] ?? key;
+
+  String readAt(String source) => fr ? "Lire l'article complet sur $source" : 'Read the full story at $source';
+
+  String covered(int n) => fr ? 'Couvert par $n média${n == 1 ? '' : 's'}' : 'Covered by $n outlet${n == 1 ? '' : 's'}';
+
+  String updated(DateTime when) => fr ? 'Nouvelles mises à jour ${ago(when)}' : 'News updated ${ago(when)}';
 
   String ago(DateTime when) {
     final d = DateTime.now().difference(when);
-    String fmt(int n, String unit) => fr ? 'il y a $n ${t(unit)}' : '$n${t(unit)}';
     if (d.inMinutes < 1) return t('justNow');
-    if (d.inHours < 1) return fmt(d.inMinutes, 'ago_m');
-    if (d.inDays < 1) return fmt(d.inHours, 'ago_h');
-    return fmt(d.inDays, 'ago_d');
+    if (d.inHours < 1) return fr ? 'il y a ${d.inMinutes} min' : '${d.inMinutes} min ago';
+    if (d.inDays < 1) return fr ? 'il y a ${d.inHours} h' : '${d.inHours}h ago';
+    return fr ? 'il y a ${d.inDays} j' : '${d.inDays}d ago';
   }
+
+  static const _topics = {
+    'canada': ['Canada', 'Canada'],
+    'politics': ['Politics', 'Politique'],
+    'business': ['Business', 'Économie'],
+    'money': ['Cost of Living', 'Coût de la vie'],
+    'canada_us': ['Canada–U.S.', 'Canada–É.-U.'],
+    'world': ['World', 'Monde'],
+    'sports': ['Sports', 'Sports'],
+    'tech': ['Tech & Science', 'Techno et science'],
+    'climate': ['Climate', 'Climat'],
+    'health': ['Health', 'Santé'],
+    'indigenous': ['Indigenous', 'Autochtones'],
+    'entertainment': ['Culture', 'Culture'],
+  };
+
+  String topic(String id) => _topics[id]?[fr ? 1 : 0] ?? id;
 
   static const provinceNames = {
     'ON': ['Ontario', 'Ontario'],
@@ -131,3 +169,19 @@ class S {
 
   String provinceName(String code) => provinceNames[code]?[fr ? 1 : 0] ?? code;
 }
+
+/// Languages offered at setup. Arabic, Hindi and Punjabi are shown as "coming soon".
+class Lang {
+  const Lang(this.id, this.name, this.ready);
+  final String id;
+  final String name;
+  final bool ready;
+}
+
+const List<Lang> languages = [
+  Lang('en', 'English', true),
+  Lang('fr', 'Français', true),
+  Lang('ar', 'العربية', false),
+  Lang('hi', 'हिन्दी', false),
+  Lang('pa', 'ਪੰਜਾਬੀ', false),
+];

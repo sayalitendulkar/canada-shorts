@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../services/app_state.dart';
 
+/// About, contact (required by Google Play for news apps), privacy, dark mode.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.state});
   final AppState state;
@@ -15,39 +16,18 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, _) {
         final s = state.s;
         return Scaffold(
-          appBar: AppBar(title: Text(s.t('settings'))),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF111111),
+            foregroundColor: Colors.white,
+            title: Text(s.t('about')),
+          ),
           body: ListView(
             children: [
-              ListTile(
-                title: Text(s.t('language')),
-                trailing: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'en', label: Text('EN')),
-                    ButtonSegment(value: 'fr', label: Text('FR')),
-                  ],
-                  selected: {state.lang},
-                  onSelectionChanged: (v) => state.setLang(v.first),
-                ),
-              ),
-              ListTile(
-                title: Text(s.t('province')),
-                trailing: DropdownButton<String?>(
-                  value: state.province,
-                  items: [
-                    DropdownMenuItem<String?>(value: null, child: Text(s.t('none'))),
-                    for (final c in provinceCodes)
-                      DropdownMenuItem<String?>(value: c, child: Text(s.provinceName(c))),
-                  ],
-                  onChanged: state.setProvince,
-                ),
-              ),
-              SwitchListTile(
-                title: Text(s.t('darkMode')),
-                value: state.darkMode,
-                onChanged: state.setDark,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(s.t('aboutText'), style: const TextStyle(fontSize: 15, height: 1.5)),
               ),
               const Divider(),
-              ListTile(title: Text(s.t('about')), subtitle: Text(s.t('aboutText'))),
               ListTile(
                 leading: const Icon(Icons.mail_outline),
                 title: Text(s.t('contact')),
@@ -57,7 +37,13 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: Text(s.t('privacy')),
-                onTap: () => launchUrl(Uri.parse(privacyUrl)),
+                onTap: () => launchUrl(Uri.parse(privacyUrl), mode: LaunchMode.inAppBrowserView),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.dark_mode_outlined),
+                title: Text(s.t('darkMode')),
+                value: state.darkMode,
+                onChanged: state.setDark,
               ),
             ],
           ),

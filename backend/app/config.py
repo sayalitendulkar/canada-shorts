@@ -33,6 +33,12 @@ GEMINI_MODEL = os.getenv("CS_GEMINI_MODEL", "")
 # Free tiers have daily limits: write at most this many AI summaries per day,
 # most important stories first, and only for stories from the last 24 hours.
 AI_DAILY_LIMIT = int(os.getenv("CS_AI_DAILY_LIMIT", "30"))
+AI_FRENCH_SHARE = 0.4  # 40% of the daily AI quota is kept for French stories
+
+
+def ai_limit(lang: str) -> int:
+    fr = round(AI_DAILY_LIMIT * AI_FRENCH_SHARE)
+    return fr if lang == "fr" else AI_DAILY_LIMIT - fr
 AI_MAX_AGE_HOURS = 24
 AI_PAUSE_SECONDS = float(os.getenv("CS_AI_PAUSE_SECONDS", "5"))
 
@@ -47,6 +53,9 @@ TOP_STORY_MIN_SOURCES = 3
 OWNER_CAP_SHARE = 0.25  # max share of a feed page from one owner
 
 ADMIN_TOKEN = os.getenv("CS_ADMIN_TOKEN", "change-me")
+
+# Shown in the privacy policy and app (Google Play requires a real contact email).
+CONTACT_EMAIL = os.getenv("CS_CONTACT_EMAIL", "your-email@example.com")
 
 # 1 = big stories (3+ outlets) and flagged drafts wait for an editor at /admin.
 # 0 = publish automatically (used online on GitHub, where nobody runs /admin);

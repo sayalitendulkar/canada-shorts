@@ -4,8 +4,11 @@ class SourceRef {
   final String url;
   final String bias;
 
-  factory SourceRef.fromJson(Map<String, dynamic> j) =>
-      SourceRef(name: j['name'] as String, url: j['url'] as String, bias: j['bias'] as String);
+  factory SourceRef.fromJson(Map<String, dynamic> j) => SourceRef(
+        name: (j['name'] ?? '') as String,
+        url: (j['url'] ?? '') as String,
+        bias: (j['bias'] ?? 'centre') as String,
+      );
 
   Map<String, dynamic> toJson() => {'name': name, 'url': url, 'bias': bias};
 }
@@ -15,12 +18,14 @@ class BiasMix {
   final int left, centre, right, official, total;
   final String? blindspot;
 
+  static int _i(dynamic v) => v is num ? v.toInt() : 0;
+
   factory BiasMix.fromJson(Map<String, dynamic> j) => BiasMix(
-        left: j['left'] ?? 0,
-        centre: j['centre'] ?? 0,
-        right: j['right'] ?? 0,
-        official: j['official'] ?? 0,
-        total: j['total'] ?? 0,
+        left: _i(j['left']),
+        centre: _i(j['centre']),
+        right: _i(j['right']),
+        official: _i(j['official']),
+        total: _i(j['total']),
         blindspot: j['blindspot'] as String?,
       );
 
@@ -36,12 +41,14 @@ class Story {
     required this.summary,
     required this.summaryBy,
     required this.category,
+    required this.provinces,
     required this.imageUrl,
     required this.leadSource,
     required this.readMoreUrl,
     required this.publishedAt,
     required this.sources,
     required this.bias,
+    required this.rank,
   });
 
   final int id;
@@ -50,26 +57,30 @@ class Story {
   final String summary;
   final String summaryBy; // ai | editor | excerpt
   final String category;
+  final List<String> provinces;
   final String? imageUrl;
   final String leadSource;
   final String readMoreUrl;
   final DateTime publishedAt;
   final List<SourceRef> sources;
   final BiasMix bias;
+  final double rank;
 
   factory Story.fromJson(Map<String, dynamic> j) => Story(
-        id: j['id'] as int,
-        lang: j['lang'] as String,
+        id: (j['id'] as num).toInt(),
+        lang: (j['lang'] ?? 'en') as String,
         headline: (j['headline'] ?? '') as String,
         summary: (j['summary'] ?? '') as String,
         summaryBy: (j['summary_by'] ?? 'excerpt') as String,
         category: (j['category'] ?? 'canada') as String,
+        provinces: ((j['provinces'] ?? const []) as List).map((e) => e.toString()).toList(),
         imageUrl: j['image_url'] as String?,
         leadSource: (j['lead_source'] ?? '') as String,
         readMoreUrl: (j['read_more_url'] ?? '') as String,
-        publishedAt: DateTime.tryParse(j['published_at'] as String? ?? '')?.toLocal() ?? DateTime.now(),
-        sources: ((j['sources'] ?? []) as List).map((e) => SourceRef.fromJson(e as Map<String, dynamic>)).toList(),
-        bias: BiasMix.fromJson((j['bias'] ?? {}) as Map<String, dynamic>),
+        publishedAt: DateTime.tryParse((j['published_at'] ?? '') as String)?.toLocal() ?? DateTime.now(),
+        sources: ((j['sources'] ?? const []) as List).map((e) => SourceRef.fromJson(e as Map<String, dynamic>)).toList(),
+        bias: BiasMix.fromJson((j['bias'] ?? const <String, dynamic>{}) as Map<String, dynamic>),
+        rank: j['rank'] is num ? (j['rank'] as num).toDouble() : 0.0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -79,17 +90,21 @@ class Story {
         'summary': summary,
         'summary_by': summaryBy,
         'category': category,
+        'provinces': provinces,
         'image_url': imageUrl,
         'lead_source': leadSource,
         'read_more_url': readMoreUrl,
         'published_at': publishedAt.toUtc().toIso8601String(),
         'sources': sources.map((s) => s.toJson()).toList(),
         'bias': bias.toJson(),
+        'rank': rank,
       };
 }
 
-class Category {
-  Category(this.id, this.label);
-  final String id;
-  final String label;
+/// One download of the news file.
+class Feed {
+  Feed({required this.stories, required this.generatedAt, this.fromCache = false});
+  final List<Story> stories;
+  final DateTime? generatedAt;
+  final bool fromCache;
 }
