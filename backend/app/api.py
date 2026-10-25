@@ -68,9 +68,10 @@ def story_out(conn, s) -> dict:
 
 def score(story: dict, province: str | None, now: datetime) -> float:
     age_h = (now - datetime.fromisoformat(story["published_at"])).total_seconds() / 3600
-    freshness = exp(-max(age_h, 0) / 12)
-    # Covered by several outlets = major news, so it ranks well above single-outlet items.
-    importance = 1 + min(story["bias"]["total"] - 1, 6) * 0.6 + (1.5 if story["is_top"] else 0)
+    # Newest first, like Inshorts: a story loses half its weight about every 4 hours.
+    freshness = exp(-max(age_h, 0) / 6)
+    # Covered by several outlets = bigger news, so it gets a modest boost.
+    importance = 1 + min(story["bias"]["total"] - 1, 6) * 0.35 + (0.5 if story["is_top"] else 0)
     local = 1.4 if province and province in story["provinces"] else 1.0
     return freshness * importance * local
 
