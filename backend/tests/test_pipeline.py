@@ -180,35 +180,49 @@ def test_extract_article_text():
 
 
 def test_ai_summaries_with_quota(env, monkeypatch):
+    import re
     from app import config, gemini, pipeline
     from app.db import session
     monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(config, "AI_PAUSE_SECONDS", 0)
-    monkeypatch.setattr(config, "AI_DAILY_LIMIT", 2)
+    monkeypatch.setattr(config, "AI_DAILY_LIMIT", 2)  # requests per day: 1 English + 1 French
+    monkeypatch.setattr(config, "AI_BATCH_SIZE", 2)
     monkeypatch.setattr(pipeline, "fetch_article_text", lambda url: "Full article text " * 50 + RATE)
     calls = []
 
-    def fake(prompt):
+    def fake(prompt, max_tokens=600):
         calls.append(prompt)
-        return {"headline": "Bank of Canada cuts key rate to 2.25 per cent",
-                "summary": "The Bank of Canada cut its key interest rate to 2.25 per cent on Wednesday, citing slower growth."}
+        n = len(re.findall(r"=== Story \d+ ===", prompt))
+        return {"stories": [{"id": i, "headline": "Bank of Canada cuts key rate to 2.25 per cent",
+                             "summary": "The Bank of Canada cut its key interest rate to 2.25 per cent on Wednesday, citing slower growth."}
+                            for i in range(1, n + 1)]}
     monkeypatch.setattr(gemini, "generate_json", fake)
     stats = pipeline.run_once(fetch=False)
-    assert len(calls) == 2 and stats["ai_written"] >= 1  # daily limit respected
-    assert "Article text:" in calls[0]  # the AI read the article, not only the teaser
+    assert len(calls) == 2 and stats["ai_written"] >= 2  # daily request limit respected, several stories per request
+    assert "Article text:" in calls[0] and "=== Story 2 ===" in calls[0]
     with session() as conn:
         rate = conn.execute("SELECT * FROM stories WHERE headline LIKE 'Bank of Canada cuts key rate%' AND lang='en'").fetchone()
         assert rate["summary_by"] == "ai"
         left = conn.execute("SELECT COUNT(*) FROM stories WHERE needs_resummary = 1").fetchone()[0]
         assert left >= 1  # stories that missed out wait for tomorrow's quota
 
-    def over(prompt):
+    def over(prompt, max_tokens=600):
         raise gemini.QuotaExceeded("429")
     monkeypatch.setattr(gemini, "generate_json", over)
     monkeypatch.setattr(config, "AI_DAILY_LIMIT", 50)
     pipeline.run_once(fetch=False)  # must not crash; falls back to excerpts
     with session() as conn:
         assert conn.execute("SELECT summary_by FROM stories WHERE id = ?", (rate["id"],)).fetchone()[0] == "ai"
+
+
+def test_clean_title_and_future_times():
+    from app.summarize import clean_title
+    assert clean_title("B.C. elects first Conservative government in nearly 100 years. Live updates here.") == \
+        "B.C. elects first Conservative government in nearly 100 years"
+    assert clean_title("WATCH: Leafs win again | CTV News") == "Leafs win again"
+    from app.ingest import _when
+    future = (datetime.now(timezone.utc) + timedelta(hours=4)).timetuple()
+    assert _when({"published_parsed": future}) <= datetime.now(timezone.utc) + timedelta(seconds=5)
 
 
 def test_gemini_falls_back_to_next_free_model(monkeypatch):

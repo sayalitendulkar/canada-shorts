@@ -30,9 +30,12 @@ SUMMARY_MODEL = os.getenv("CS_SUMMARY_MODEL", "claude-haiku-4-5")  # check curre
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("CS_GEMINI_MODEL", "")
 
-# Free tiers have daily limits: write at most this many AI summaries per day,
-# most important stories first, and only for stories from the last 24 hours.
-AI_DAILY_LIMIT = int(os.getenv("CS_AI_DAILY_LIMIT", "30"))
+# Free tiers limit REQUESTS per day. Each request writes up to AI_BATCH_SIZE stories,
+# most important first, only for stories from the last 24 hours. If Google says the
+# daily limit is reached, the rest simply wait for the next day.
+AI_DAILY_LIMIT = int(os.getenv("CS_AI_DAILY_REQUESTS", "150"))  # requests per day (both languages)
+AI_BATCH_SIZE = int(os.getenv("CS_AI_BATCH_SIZE", "6"))
+AI_MAX_REQUESTS_PER_RUN = int(os.getenv("CS_AI_REQUESTS_PER_RUN", "8"))
 AI_FRENCH_SHARE = 0.4  # 40% of the daily AI quota is kept for French stories
 
 

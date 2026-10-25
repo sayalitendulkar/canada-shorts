@@ -147,6 +147,8 @@ def bias_mix(articles) -> dict:
             mix["right"] += 1
         elif bias == "official":
             mix["official"] += 1
+        elif bias == "unrated":  # not yet rated: counted in the total only, never as a side
+            pass
         else:
             mix["centre"] += 1
     mix["total"] = len(seen)

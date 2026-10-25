@@ -76,10 +76,10 @@ def _error_text(r: httpx.Response) -> str:
         return r.text[:400]
 
 
-def generate_json(prompt: str, _attempt: int = 0) -> dict:
+def generate_json(prompt: str, _attempt: int = 0, max_tokens: int = 600) -> dict:
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json", "maxOutputTokens": 600},
+        "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json", "maxOutputTokens": max_tokens},
     }
     name = model()
     r = httpx.post(f"{BASE}/models/{name}:generateContent", headers=_headers(), json=body, timeout=60)
@@ -90,16 +90,22 @@ def generate_json(prompt: str, _attempt: int = 0) -> dict:
             if r.status_code == 429 and ("per minute" in low or "perminute" in low) and "per day" not in low:
                 log.info("Gemini per-minute limit; waiting 60 s")
                 time.sleep(60)
-                return generate_json(prompt, _attempt + 1)
+                return generate_json(prompt, _attempt + 1, max_tokens)
             if r.status_code == 404 or "limit: 0" in low or "per day" in low or "perday" in low:
                 _drop_current_model(msg)  # this model has no (more) free quota: try the next
                 if _queue:
-                    return generate_json(prompt, _attempt + 1)
+                    return generate_json(prompt, _attempt + 1, max_tokens)
         if r.status_code == 429:
             raise QuotaExceeded(msg)
         raise RuntimeError(f"Gemini error {r.status_code}: {msg}")
     if r.status_code >= 400:
         raise RuntimeError(f"Gemini error {r.status_code}: {_error_text(r)}")
     parts = r.json()["candidates"][0]["content"]["parts"]
-    text = "".join(p.get("text", "") for p in parts)
-    return json.loads(text[text.find("{"): text.rfind("}") + 1])
+    text = "".join(p.get("text", "") for p in parts).strip()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(text[text.find("{"): text.rfind("}") + 1])
+    if isinstance(data, list):  # some models return the list without the wrapper
+        data = {"stories": data} if data and isinstance(data[0], dict) and "id" in data[0] else (data[0] if data else {})
+    return data
