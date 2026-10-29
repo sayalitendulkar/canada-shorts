@@ -1,6 +1,8 @@
 import 'package:canada_shorts/l10n.dart';
 import 'package:canada_shorts/models/story.dart';
 import 'package:canada_shorts/services/api_client.dart';
+import 'package:canada_shorts/services/app_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Story _story(int id, String cat, {List<String> prov = const [], double rank = 1}) => Story.fromJson({
@@ -50,5 +52,22 @@ void main() {
     expect(S('fr').t('readMore'), "Lire l'article complet");
     expect(S('fr').provinceName('QC'), 'Québec');
     expect(S('fr').topic('money'), 'Coût de la vie');
+  });
+
+  test('Reactions: one per story, tap again to take it back, kept after restart', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    final st = AppState();
+    await st.load();
+    final s = _story(5, 'sports');
+    await st.react(s, 'wow');
+    expect(st.reactionFor(s), 'wow');
+    await st.react(s, 'sad');
+    expect(st.reactionFor(s), 'sad');
+    final again = AppState();
+    await again.load();
+    expect(again.reactionFor(s), 'sad');
+    await again.react(s, 'sad');
+    expect(again.reactionFor(s), isNull);
   });
 }

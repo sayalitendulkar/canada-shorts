@@ -3,9 +3,10 @@ Schedule it every 10 minutes (cron, systemd timer, or Cloud Scheduler):
 
     python -m app.pipeline
 """
+import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from . import config
 from .categorize import categorize, provinces
@@ -14,7 +15,7 @@ from .db import session
 from .article import fetch_article_text
 from .gemini import QuotaExceeded
 from .ingest import fetch_all, load_sources
-from .summarize import ai_enabled, summarize
+from .summarize import ai_enabled, summarize, summarize_batch
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +45,13 @@ def _readable_text(arts, paywalled: set[str]) -> str:
 
 
 def process_stories(conn) -> dict:
-    stats = {"published": 0, "review": 0, "ai_written": 0}
+    stats = {"published": 0, "review": 0, "ai_written": 0, "ai_requests": 0, "ai_wanted": 0, "ai_error": ""}
+    # Stories with new articles, plus recent stories that still show the outlet's own
+    # text (so they get an AI summary as soon as there is free quota).
+    since = (datetime.now(timezone.utc) - timedelta(hours=config.AI_MAX_AGE_HOURS)).isoformat()
     rows = conn.execute(
-        "SELECT * FROM stories WHERE needs_resummary = 1 AND status != 'rejected'"
+        """SELECT * FROM stories WHERE status != 'rejected' AND (needs_resummary = 1
+           OR (summary_by = 'excerpt' AND created_at >= ?))""", (since,)
     ).fetchall()
     paywalled = {s["id"] for s in load_sources() if s.get("paywall")}
     now = datetime.now(timezone.utc)
@@ -61,40 +66,67 @@ def process_stories(conn) -> dict:
             work.append((story, arts, len({a["source_name"] for a in arts})))
     work.sort(key=lambda w: (w[2], w[1][0]["published_at"]), reverse=True)
 
-    used = _ai_used_today(conn)  # separate daily quotas for English and French
+    used = _ai_used_today(conn)  # requests used today, per language
     ai_blocked = not ai_enabled()
+    ai_results: dict[int, dict] = {}
+    waiting: set[int] = set()  # fresh stories that still need an AI summary later
+
+    # 1) Pick the stories that should get an AI summary, biggest news first.
+    queue: dict[str, list] = {"en": [], "fr": []}
+    for story, arts, n_outlets in work:
+        lead = arts[0]
+        fresh = (now - datetime.fromisoformat(lead["published_at"])).total_seconds() < config.AI_MAX_AGE_HOURS * 3600
+        if story["summary_by"] == "editor" or not fresh or not ai_enabled():
+            continue
+        words = sum(len(f"{a['title']} {a['excerpt']}".split()) for a in arts)
+        queue[story["lang"]].append((story, arts, words))
+    stats["ai_wanted"] = sum(len(v) for v in queue.values())
+    for lang in queue:  # stories without any AI text go first; AI updates of known stories after
+        queue[lang].sort(key=lambda it: it[0]["summary_by"] == "ai")
+
+    # 2) Ask the AI for several stories per request.
+    requests_this_run = 0
+    for lang, items in queue.items():
+        for i in range(0, len(items), config.AI_BATCH_SIZE):
+            chunk = items[i:i + config.AI_BATCH_SIZE]
+            if ai_blocked or used[lang] >= config.ai_limit(lang) or requests_this_run >= config.AI_MAX_REQUESTS_PER_RUN:
+                waiting.update(s["id"] for s, _, _ in chunk)
+                continue
+            batch = []
+            for story, arts, words in chunk:
+                full = _readable_text(arts, paywalled)
+                if full or words >= 40:
+                    batch.append((story["id"], arts, full))
+            if not batch:
+                continue
+            try:
+                used[lang] += 1
+                requests_this_run += 1
+                stats["ai_requests"] += 1
+                results = summarize_batch(batch, lang)
+                ai_results.update(results)
+                stats["ai_written"] += sum(r["summary_by"] == "ai" for r in results.values())
+                waiting.update(k for k, r in results.items() if r["summary_by"] != "ai" and "ai_draft_failed_checks" not in r["problems"])
+                time.sleep(config.AI_PAUSE_SECONDS)  # stay under per-minute limits
+            except QuotaExceeded as exc:
+                log.warning("AI free limit reached; will retry on a later run. Google says: %s", exc)
+                stats["ai_error"] = "quota: " + str(exc)[:300]
+                ai_blocked = True
+                waiting.update(k for k, _, _ in batch)
+
+    # 3) Save every story.
     for story, arts, n_outlets in work:
         lead = arts[0]  # newest article: freshest headline and facts
         all_text = " ".join(f"{a['title']} {a['excerpt']}" for a in arts)
-        fresh = (now - datetime.fromisoformat(lead["published_at"])).total_seconds() < config.AI_MAX_AGE_HOURS * 3600
-        retry_later = False
-
+        retry_later = story["id"] in waiting
         if story["summary_by"] == "editor":  # an editor's version always wins
             result = {"headline": story["headline"], "summary": story["summary"], "summary_by": "editor", "problems": []}
+        elif story["id"] in ai_results and ai_results[story["id"]]["summary_by"] == "ai":
+            result = ai_results[story["id"]]
+        elif story["summary_by"] == "ai":  # keep the AI text we already have
+            result = {"headline": story["headline"], "summary": story["summary"], "summary_by": "ai", "problems": []}
         else:
-            result = None
-            lang = story["lang"]
-            want_ai = fresh and not ai_blocked and used[lang] < config.ai_limit(lang)
-            if want_ai:
-                full_text = _readable_text(arts, paywalled)
-                excerpt_words = sum(len(a["excerpt"].split()) for a in arts)
-                if full_text or excerpt_words >= 80:
-                    try:
-                        used[lang] += 1
-                        result = summarize(arts, story["lang"], full_text)
-                        if result["summary_by"] == "ai":
-                            stats["ai_written"] += 1
-                        time.sleep(config.AI_PAUSE_SECONDS)  # stay under per-minute limits
-                    except QuotaExceeded as exc:
-                        log.warning("AI free limit reached; will retry on a later run. Google says: %s", exc)
-                        ai_blocked, retry_later = True, True
-            elif fresh and ai_enabled() and story["summary_by"] != "ai":
-                retry_later = True  # quota used up for today: try again tomorrow
-            if result is None or result["summary_by"] != "ai":
-                if story["summary_by"] == "ai":  # keep the AI text we already have
-                    result = {"headline": story["headline"], "summary": story["summary"], "summary_by": "ai", "problems": []}
-                elif result is None:
-                    result = summarize(arts, story["lang"], use_ai=False)
+            result = ai_results.get(story["id"]) or summarize(arts, story["lang"], use_ai=False)
 
         is_top = n_outlets >= config.TOP_STORY_MIN_SOURCES
         if story["status"] == "published" and story["summary_by"] == "editor":
@@ -126,7 +158,12 @@ def run_once(fetch: bool = True) -> dict:
         added = fetch_all(conn) if fetch else 0
         clustered = assign_stories(conn)
         stats = process_stories(conn)
-    stats.update({"new_articles": added, "clustered": clustered})
+        stats.update({"new_articles": added, "clustered": clustered,
+                      "ai_used_today": _ai_used_today(conn), "finished_at": datetime.now(timezone.utc).isoformat()})
+        from . import summarize as _s
+        if not stats["ai_error"] and _s.last_error:
+            stats["ai_error"] = _s.last_error
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('last_run', ?)", (json.dumps(stats),))
     log.info("pipeline run: %s", stats)
     return stats
 

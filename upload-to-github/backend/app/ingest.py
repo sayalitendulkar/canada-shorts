@@ -20,6 +20,14 @@ def load_sources(path: str | None = None) -> list[dict]:
 
 
 def _when(entry) -> datetime:
+    """Publication time in UTC. Some feeds (e.g. CTV) label Eastern time as GMT,
+    which puts stories hours in the future; those are clamped to 'now'."""
+    t = _when_raw(entry)
+    now = datetime.now(timezone.utc)
+    return now if t > now + timedelta(minutes=5) else t
+
+
+def _when_raw(entry) -> datetime:
     for key in ("published_parsed", "updated_parsed"):
         t = entry.get(key)
         if t:

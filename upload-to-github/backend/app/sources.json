@@ -176,6 +176,17 @@
       "category": "canada",
       "url": "https://api.io.canada.ca/io-server/gc/news/fr/v2?sort=publishedDate&orderBy=desc&pick=50&format=atom&type=newsreleases",
       "paywall": false
+    },
+    {
+      "id": "thn-immigration",
+      "name": "THN News",
+      "owner": "THN News",
+      "lang": "en",
+      "bias": "unrated",
+      "factual": "unrated",
+      "category": "canada",
+      "url": "https://todayheadlinenews.com/category/immigration/feed/",
+      "paywall": false
     }
   ]
 }

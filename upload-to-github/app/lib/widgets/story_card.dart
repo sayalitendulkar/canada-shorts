@@ -7,6 +7,7 @@ import '../config.dart';
 import '../models/story.dart';
 import '../services/app_state.dart';
 import 'bias_bar.dart';
+import 'reaction_bar.dart';
 
 /// One full-screen news card, Inshorts style: picture, source tab, bookmark /
 /// share / report, headline, 60-word summary, coverage line, and a bottom strip
@@ -155,6 +156,8 @@ class StoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     CoverageLine(bias: story.bias, s: s),
+                    const SizedBox(height: 14),
+                    ReactionBar(story: story, state: state),
                   ],
                 ),
               ),

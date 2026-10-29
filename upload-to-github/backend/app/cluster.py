@@ -55,7 +55,11 @@ def _ts(iso: str) -> float:
 def housekeeping(conn) -> None:
     """Drop old or non-news articles, and regroup everything when the grouping
     method has changed (CLUSTER_VERSION)."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    now = datetime.now(timezone.utc)
+    # Fix times that are in the future (feeds with a wrong time zone).
+    conn.execute("UPDATE articles SET published_at = ? WHERE published_at > ?",
+                 (now.isoformat(), (now + timedelta(minutes=5)).isoformat()))
+    cutoff = (now - timedelta(days=7)).isoformat()
     conn.execute("DELETE FROM articles WHERE published_at < ?", (cutoff,))
     for row in conn.execute("SELECT id, url, title FROM articles").fetchall():
         if is_not_news(row["url"], row["title"]):
@@ -143,6 +147,8 @@ def bias_mix(articles) -> dict:
             mix["right"] += 1
         elif bias == "official":
             mix["official"] += 1
+        elif bias == "unrated":  # not yet rated: counted in the total only, never as a side
+            pass
         else:
             mix["centre"] += 1
     mix["total"] = len(seen)
