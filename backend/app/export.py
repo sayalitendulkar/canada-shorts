@@ -18,6 +18,7 @@ from .db import session
 
 MAX_AGE_HOURS = 72
 MAX_STORIES = 300
+MIN_EXCERPT_WORDS = 30
 
 PRIVACY_HTML = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy / Politique de confidentialité — Canada Shorts</title>
@@ -74,6 +75,10 @@ def export(out_dir: str) -> dict:
                 (lang, since),
             ).fetchall()
             stories = [story_out(conn, r) for r in rows]
+            # Hide cards that only have a one-line teaser (they look empty on the phone),
+            # unless several outlets cover the story.
+            stories = [st for st in stories if not (st["summary_by"] == "excerpt"
+                       and len(st["summary"].split()) < MIN_EXCERPT_WORDS and st["bias"]["total"] < 2)]
             for st in stories:
                 st["rank"] = round(score(st, None, now), 4)
             stories.sort(key=lambda st: st["rank"], reverse=True)

@@ -65,7 +65,8 @@
       "factual": "high",
       "category": "top",
       "url": "https://www.ctvnews.ca/arc/outboundfeeds/rss/?outputType=xml",
-      "paywall": false
+      "paywall": false,
+      "no_ai_read": true
     },
     {
       "id": "globe-politics",

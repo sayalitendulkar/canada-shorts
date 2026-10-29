@@ -45,7 +45,8 @@ def _readable_text(arts, paywalled: set[str]) -> str:
 
 
 def process_stories(conn) -> dict:
-    stats = {"published": 0, "review": 0, "ai_written": 0, "ai_requests": 0, "ai_wanted": 0, "ai_error": ""}
+    stats = {"published": 0, "review": 0, "ai_written": 0, "ai_requests": 0, "ai_wanted": 0,
+             "ai_failed_checks": 0, "ai_too_short": 0, "ai_error": ""}
     # Stories with new articles, plus recent stories that still show the outlet's own
     # text (so they get an AI summary as soon as there is free quota).
     since = (datetime.now(timezone.utc) - timedelta(hours=config.AI_MAX_AGE_HOURS)).isoformat()
@@ -53,7 +54,8 @@ def process_stories(conn) -> dict:
         """SELECT * FROM stories WHERE status != 'rejected' AND (needs_resummary = 1
            OR (summary_by = 'excerpt' AND created_at >= ?))""", (since,)
     ).fetchall()
-    paywalled = {s["id"] for s in load_sources() if s.get("paywall")}
+    # Article pages we don't open for AI: paywalled sites, and sites that ask AI tools not to read them.
+    paywalled = {s["id"] for s in load_sources() if s.get("paywall") or s.get("no_ai_read")}
     now = datetime.now(timezone.utc)
 
     # Most important first (more outlets, then newest) so the free AI quota goes to big news.
@@ -71,6 +73,9 @@ def process_stories(conn) -> dict:
     ai_results: dict[int, dict] = {}
     waiting: set[int] = set()  # fresh stories that still need an AI summary later
 
+    row = conn.execute("SELECT value FROM meta WHERE key = 'ai_skip'").fetchone()
+    skip_ids: set[int] = set(json.loads(row["value"])) if row else set()
+
     # 1) Pick the stories that should get an AI summary, biggest news first.
     queue: dict[str, list] = {"en": [], "fr": []}
     for story, arts, n_outlets in work:
@@ -78,6 +83,8 @@ def process_stories(conn) -> dict:
         fresh = (now - datetime.fromisoformat(lead["published_at"])).total_seconds() < config.AI_MAX_AGE_HOURS * 3600
         if story["summary_by"] == "editor" or not fresh or not ai_enabled():
             continue
+        if story["id"] in skip_ids and not story["needs_resummary"]:
+            continue  # too little text last time and nothing new since
         words = sum(len(f"{a['title']} {a['excerpt']}".split()) for a in arts)
         queue[story["lang"]].append((story, arts, words))
     stats["ai_wanted"] = sum(len(v) for v in queue.values())
@@ -85,34 +92,49 @@ def process_stories(conn) -> dict:
         queue[lang].sort(key=lambda it: it[0]["summary_by"] == "ai")
 
     # 2) Ask the AI for several stories per request.
-    requests_this_run = 0
+    run_requests = {"en": 0, "fr": 0}
+
+    def send(lang, batch):
+        nonlocal ai_blocked
+        try:
+            used[lang] += 1
+            run_requests[lang] += 1
+            stats["ai_requests"] += 1
+            results = summarize_batch(batch, lang)
+            ai_results.update(results)
+            stats["ai_written"] += sum(r["summary_by"] == "ai" for r in results.values())
+            stats["ai_failed_checks"] += sum("ai_draft_failed_checks" in r["problems"] for r in results.values())
+            waiting.update(k for k, r in results.items() if r["summary_by"] != "ai" and "ai_draft_failed_checks" not in r["problems"])
+            time.sleep(config.AI_PAUSE_SECONDS)  # stay under per-minute limits
+        except QuotaExceeded as exc:
+            log.warning("AI free limit reached; will retry on a later run. Google says: %s", exc)
+            stats["ai_error"] = "quota: " + str(exc)[:300]
+            ai_blocked = True
+            waiting.update(k for k, _, _ in batch)
+
     for lang, items in queue.items():
-        for i in range(0, len(items), config.AI_BATCH_SIZE):
-            chunk = items[i:i + config.AI_BATCH_SIZE]
-            if ai_blocked or used[lang] >= config.ai_limit(lang) or requests_this_run >= config.AI_MAX_REQUESTS_PER_RUN:
-                waiting.update(s["id"] for s, _, _ in chunk)
+        # Each language gets its own share of this run's requests, so French isn't starved.
+        run_cap = max(1, round(config.AI_MAX_REQUESTS_PER_RUN * (config.AI_FRENCH_SHARE if lang == "fr" else 1 - config.AI_FRENCH_SHARE)))
+        batch = []
+        for story, arts, words in items:
+            if ai_blocked or used[lang] >= config.ai_limit(lang) or run_requests[lang] >= run_cap:
+                waiting.add(story["id"])
                 continue
-            batch = []
-            for story, arts, words in chunk:
-                full = _readable_text(arts, paywalled)
-                if full or words >= 40:
-                    batch.append((story["id"], arts, full))
-            if not batch:
+            full = _readable_text(arts, paywalled)
+            if not full and words < 40:
+                skip_ids.add(story["id"])  # only a one-line teaser: not enough to summarise honestly
+                stats["ai_too_short"] += 1
                 continue
-            try:
-                used[lang] += 1
-                requests_this_run += 1
-                stats["ai_requests"] += 1
-                results = summarize_batch(batch, lang)
-                ai_results.update(results)
-                stats["ai_written"] += sum(r["summary_by"] == "ai" for r in results.values())
-                waiting.update(k for k, r in results.items() if r["summary_by"] != "ai" and "ai_draft_failed_checks" not in r["problems"])
-                time.sleep(config.AI_PAUSE_SECONDS)  # stay under per-minute limits
-            except QuotaExceeded as exc:
-                log.warning("AI free limit reached; will retry on a later run. Google says: %s", exc)
-                stats["ai_error"] = "quota: " + str(exc)[:300]
-                ai_blocked = True
-                waiting.update(k for k, _, _ in batch)
+            batch.append((story["id"], arts, full))
+            if len(batch) == config.AI_BATCH_SIZE:  # fill each request before sending it
+                send(lang, batch)
+                batch = []
+        if batch and not ai_blocked:
+            send(lang, batch)
+        elif batch:
+            waiting.update(k for k, _, _ in batch)
+    conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('ai_skip', ?)",
+                 (json.dumps(sorted(skip_ids)[-3000:]),))
 
     # 3) Save every story.
     for story, arts, n_outlets in work:
