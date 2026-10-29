@@ -74,6 +74,16 @@
   .cover { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
   .cover .mini { display: flex; width: 54px; height: 5px; border-radius: 3px; overflow: hidden; background: var(--line); flex: none; }
   .cover .mini i { display: block; }
+  .react { margin-top: 14px; }
+  .react small { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .react .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .react button { display: inline-flex; align-items: center; gap: 6px; border: 1.2px solid transparent; border-radius: 99px;
+    background: rgba(120,120,128,.12); padding: 6px 10px; font: inherit; font-size: 18px; line-height: 1; cursor: pointer;
+    transition: transform .18s, background .18s, border-color .18s; }
+  .react button span { font-size: 12px; font-weight: 600; color: #E8412C; display: none; }
+  .react button.on { background: rgba(232,65,44,.12); border-color: #E8412C; transform: scale(1.06); }
+  .react button.on span { display: inline; }
+  .react button:active { transform: scale(.94); }
   .more { flex: none; height: 68px; margin: 0; border: 0; text-align: left; padding: 0 22px; cursor: pointer; color: #fff;
           background: #2a2a2a center/cover no-repeat; position: relative; display: flex; flex-direction: column; justify-content: center; }
   .more::before { content: ""; position: absolute; inset: 0; background: rgba(20,20,20,.72); backdrop-filter: blur(6px); }
@@ -203,6 +213,7 @@ const T = {
     offline: 'Cannot reach the server. Is PowerShell still running uvicorn?', offlineWeb: 'Could not load the news. Check your internet and try again.', savedT: 'Saved', unsavedT: 'Removed', copied: 'Link copied',
     waiting: n => `${n} big ${n === 1 ? 'story is' : 'stories are'} waiting for editor approval.`, open: 'Open editor',
     ago: (v, u) => ({ m: `${v} min ago`, h: `${v}h ago`, d: `${v}d ago` }[u]), now: 'just now',
+    react: 'How does this news make you feel?', r_like: 'Good news', r_love: 'Love it', r_wow: 'Surprising', r_sad: 'Sad', r_angry: 'Angry',
   },
   fr: {
     tagline: "L'actualité canadienne en 60 mots", langQ: 'Choisissez votre langue', langSub: 'Vous pourrez la changer dans le menu.',
@@ -217,6 +228,7 @@ const T = {
     offline: 'Serveur injoignable. PowerShell exécute-t-il toujours uvicorn?', offlineWeb: 'Impossible de charger les nouvelles. Vérifiez votre connexion.', savedT: 'Enregistré', unsavedT: 'Retiré', copied: 'Lien copié',
     waiting: n => `${n} grande${n > 1 ? 's' : ''} nouvelle${n > 1 ? 's' : ''} en attente d'approbation.`, open: "Ouvrir l'éditeur",
     ago: (v, u) => ({ m: `il y a ${v} min`, h: `il y a ${v} h`, d: `il y a ${v} j` }[u]), now: "à l'instant",
+    react: 'Comment cette nouvelle vous fait-elle réagir?', r_like: 'Bonne nouvelle', r_love: "J'adore", r_wow: 'Surprenant', r_sad: 'Triste', r_angry: 'Fâché',
   },
 };
 const LANGS = [
@@ -233,7 +245,7 @@ const SKIP_TOPICS = ['top', 'province'];
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-  clear() { try { ['cs2_lang','cs2_prov','cs2_topics','cs2_done','cs2_saved'].forEach(k => localStorage.removeItem(k)); } catch {} },
+  clear() { try { ['cs2_lang','cs2_prov','cs2_topics','cs2_done','cs2_saved','cs2_react'].forEach(k => localStorage.removeItem(k)); } catch {} },
 };
 let lang = store.get('cs2_lang', 'en'), province = store.get('cs2_prov', ''), topics = store.get('cs2_topics', []);
 let saved = store.get('cs2_saved', []);
@@ -257,6 +269,27 @@ const icon = d => { const s = document.createElementNS('http://www.w3.org/2000/s
   const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); s.append(p); return s; };
 const BOOK = 'M7 3h10v18l-5-4-5 4z', BOOK_ON = 'M7 3h10v18l-5-4-5 4z';
 const SHARE = 'M18 8a3 3 0 1 0-2.8-4M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4';
+
+/* ---------- reactions (kept in this browser only for now) ---------- */
+const REACTIONS = [['like', '👍'], ['love', '❤️'], ['wow', '😮'], ['sad', '😢'], ['angry', '😡']];
+let myReactions = store.get('cs2_react', {});
+function reactions(st) {
+  const box = el('div', 'react'), row = el('div', 'row'), key = `${st.lang}:${st.id}`;
+  box.append(el('small', null, t().react), row);
+  const paint = () => row.querySelectorAll('button').forEach(b => b.classList.toggle('on', myReactions[key] === b.dataset.r));
+  REACTIONS.forEach(([id, emoji]) => {
+    const b = el('button'); b.dataset.r = id; b.title = t()['r_' + id]; b.setAttribute('aria-label', t()['r_' + id]);
+    b.append(document.createTextNode(emoji), el('span', null, t()['r_' + id]));
+    b.onclick = () => {
+      if (myReactions[key] === id) delete myReactions[key]; else myReactions[key] = id;
+      const keys = Object.keys(myReactions); if (keys.length > 500) delete myReactions[keys[0]];
+      store.set('cs2_react', myReactions); paint();
+    };
+    row.append(b);
+  });
+  paint();
+  return box;
+}
 
 /* ---------- one news card ---------- */
 function card(st) {
@@ -297,6 +330,7 @@ function card(st) {
   ['left', 'centre', 'right', 'official'].forEach(k => { if (m[k]) parts.push(`${m[k]} ${t()[k]}`); });
   cov.append(document.createTextNode(t().covered(m.total) + (parts.length ? ' (' + parts.join(', ') + ')' : '')));
   body.append(cov);
+  body.append(reactions(st));
   c.append(body);
 
   const url = safeUrl(st.read_more_url);
