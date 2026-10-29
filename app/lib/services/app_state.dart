@@ -18,6 +18,7 @@ class AppState extends ChangeNotifier {
   bool darkMode = false;
   bool onboarded = false;
   final List<Story> bookmarks = [];
+  final Map<String, String> reactions = {}; // "lang:id" -> reaction id (this phone only for now)
 
   S get s => S(lang);
 
@@ -32,6 +33,11 @@ class AppState extends ChangeNotifier {
     bookmarks
       ..clear()
       ..addAll(_decode(_p.getString('bookmarks')));
+    reactions.clear();
+    try {
+      final raw = _p.getString('reactions');
+      if (raw != null) reactions.addAll(Map<String, String>.from(jsonDecode(raw) as Map));
+    } catch (_) {}
   }
 
   List<Story> _decode(String? raw) {
@@ -74,6 +80,24 @@ class AppState extends ChangeNotifier {
   Future<void> finishOnboarding() async {
     onboarded = true;
     await _p.setBool('onboarded', true);
+    notifyListeners();
+  }
+
+  String? reactionFor(Story st) => reactions['${st.lang}:${st.id}'];
+
+  /// Pick a reaction; picking the same one again removes it.
+  Future<void> react(Story st, String reaction) async {
+    final key = '${st.lang}:${st.id}';
+    if (reactions[key] == reaction) {
+      reactions.remove(key);
+    } else {
+      reactions[key] = reaction;
+    }
+    // Keep only the newest 500 so the phone's storage stays small.
+    while (reactions.length > 500) {
+      reactions.remove(reactions.keys.first);
+    }
+    await _p.setString('reactions', jsonEncode(reactions));
     notifyListeners();
   }
 

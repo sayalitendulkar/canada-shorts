@@ -149,6 +149,9 @@ def ai_summary(articles, lang: str, full_text: str = "") -> tuple[str, str] | No
     return None
 
 
+last_error = ""  # newest AI problem, shown in status.json
+
+
 def ai_batch(items, lang: str) -> dict:
     """Several stories in ONE request (free tiers limit requests per day, not stories).
     items: list of (key, articles, full_text). Returns {key: (headline, summary)}.
@@ -166,6 +169,8 @@ def ai_batch(items, lang: str) -> dict:
         raise
     except Exception as exc:
         log.warning("Gemini batch failed: %s", exc)
+        global last_error
+        last_error = str(exc)[:300]
         return {}
     out = {}
     for entry in (data.get("stories") or []) if isinstance(data, dict) else []:

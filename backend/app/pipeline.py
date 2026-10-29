@@ -3,9 +3,10 @@ Schedule it every 10 minutes (cron, systemd timer, or Cloud Scheduler):
 
     python -m app.pipeline
 """
+import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from . import config
 from .categorize import categorize, provinces
@@ -44,9 +45,13 @@ def _readable_text(arts, paywalled: set[str]) -> str:
 
 
 def process_stories(conn) -> dict:
-    stats = {"published": 0, "review": 0, "ai_written": 0}
+    stats = {"published": 0, "review": 0, "ai_written": 0, "ai_requests": 0, "ai_wanted": 0, "ai_error": ""}
+    # Stories with new articles, plus recent stories that still show the outlet's own
+    # text (so they get an AI summary as soon as there is free quota).
+    since = (datetime.now(timezone.utc) - timedelta(hours=config.AI_MAX_AGE_HOURS)).isoformat()
     rows = conn.execute(
-        "SELECT * FROM stories WHERE needs_resummary = 1 AND status != 'rejected'"
+        """SELECT * FROM stories WHERE status != 'rejected' AND (needs_resummary = 1
+           OR (summary_by = 'excerpt' AND created_at >= ?))""", (since,)
     ).fetchall()
     paywalled = {s["id"] for s in load_sources() if s.get("paywall")}
     now = datetime.now(timezone.utc)
@@ -75,6 +80,7 @@ def process_stories(conn) -> dict:
             continue
         words = sum(len(f"{a['title']} {a['excerpt']}".split()) for a in arts)
         queue[story["lang"]].append((story, arts, words))
+    stats["ai_wanted"] = sum(len(v) for v in queue.values())
     for lang in queue:  # stories without any AI text go first; AI updates of known stories after
         queue[lang].sort(key=lambda it: it[0]["summary_by"] == "ai")
 
@@ -96,6 +102,7 @@ def process_stories(conn) -> dict:
             try:
                 used[lang] += 1
                 requests_this_run += 1
+                stats["ai_requests"] += 1
                 results = summarize_batch(batch, lang)
                 ai_results.update(results)
                 stats["ai_written"] += sum(r["summary_by"] == "ai" for r in results.values())
@@ -103,6 +110,7 @@ def process_stories(conn) -> dict:
                 time.sleep(config.AI_PAUSE_SECONDS)  # stay under per-minute limits
             except QuotaExceeded as exc:
                 log.warning("AI free limit reached; will retry on a later run. Google says: %s", exc)
+                stats["ai_error"] = "quota: " + str(exc)[:300]
                 ai_blocked = True
                 waiting.update(k for k, _, _ in batch)
 
@@ -150,7 +158,12 @@ def run_once(fetch: bool = True) -> dict:
         added = fetch_all(conn) if fetch else 0
         clustered = assign_stories(conn)
         stats = process_stories(conn)
-    stats.update({"new_articles": added, "clustered": clustered})
+        stats.update({"new_articles": added, "clustered": clustered,
+                      "ai_used_today": _ai_used_today(conn), "finished_at": datetime.now(timezone.utc).isoformat()})
+        from . import summarize as _s
+        if not stats["ai_error"] and _s.last_error:
+            stats["ai_error"] = _s.last_error
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('last_run', ?)", (json.dumps(stats),))
     log.info("pipeline run: %s", stats)
     return stats
 

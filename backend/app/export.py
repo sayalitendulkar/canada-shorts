@@ -83,6 +83,10 @@ def export(out_dir: str) -> dict:
             (data / f"categories_{lang}.json").write_text(
                 json.dumps([{"id": c, "label": LABELS[lang][c]} for c in CATEGORIES], ensure_ascii=False), encoding="utf-8")
             counts[lang] = len(stories)
+        row = conn.execute("SELECT value FROM meta WHERE key = 'last_run'").fetchone()
+        status = json.loads(row["value"]) if row else {}
+        status["counts"] = counts
+        (data / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=1), encoding="utf-8")
     html = (config.BASE_DIR / "preview.html").read_text(encoding="utf-8")
     html = html.replace("<script>", "<script>window.CS_STATIC = true;</script>\n<script>", 1)
     (out / "index.html").write_text(html, encoding="utf-8")

@@ -61,6 +61,12 @@ class S {
     'ad': 'Ad',
     'adNext': 'Swipe up for more news',
     'justNow': 'just now',
+    'react': 'How does this news make you feel?',
+    'r_like': 'Good news',
+    'r_love': 'Love it',
+    'r_wow': 'Surprising',
+    'r_sad': 'Sad',
+    'r_angry': 'Angry',
   };
 
   static const _fr = {
@@ -116,6 +122,12 @@ class S {
     'ad': 'Annonce',
     'adNext': 'Glissez vers le haut pour plus de nouvelles',
     'justNow': "à l'instant",
+    'react': 'Comment cette nouvelle vous fait-elle réagir?',
+    'r_like': 'Bonne nouvelle',
+    'r_love': "J'adore",
+    'r_wow': 'Surprenant',
+    'r_sad': 'Triste',
+    'r_angry': 'Fâché',
   };
 
   String t(String key) => (fr ? _fr : _en)[key] ?? _en[key] ?? key;
